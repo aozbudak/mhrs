@@ -1,0 +1,114 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* Hospital theme helpers (used by Blade layouts/pages) */
+.hospital-bg{
+    background-color: #f4f9fc;
+    background-image:
+        radial-gradient(1000px circle at 8% -15%, rgba(56, 189, 248, 0.28), transparent 42%),
+        radial-gradient(900px circle at 92% 5%, rgba(16, 185, 129, 0.22), transparent 48%),
+        radial-gradient(700px circle at 50% 100%, rgba(14, 165, 233, 0.08), transparent 55%),
+        linear-gradient(180deg, #e8f4fc 0%, #f8fafc 38%, #ffffff 100%);
+}
+
+/* Sabit dekor — sayfa kaydırılırken hafif derinlik */
+.hospital-ambient{
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+}
+.hospital-ambient::before,
+.hospital-ambient::after{
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.45;
+}
+.hospital-ambient::before{
+    width: min(520px, 90vw);
+    height: min(520px, 90vw);
+    top: -12%;
+    right: -8%;
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.35) 0%, transparent 70%);
+}
+.hospital-ambient::after{
+    width: min(420px, 75vw);
+    height: min(420px, 75vw);
+    bottom: -10%;
+    left: -6%;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.28) 0%, transparent 70%);
+}
+
+/* İnce nokta ızgara — çok düşük kontrast */
+.hospital-grain{
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    opacity: 0.35;
+    background-image: radial-gradient(rgba(15, 23, 42, 0.06) 1px, transparent 1px);
+    background-size: 22px 22px;
+}
+
+@media (prefers-reduced-motion: no-preference){
+    @keyframes hospital-fade-up{
+        from{
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to{
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .hospital-content-enter{
+        animation: hospital-fade-up 0.5s ease-out both;
+    }
+}
+
+.hospital-glass{
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.78) 100%);
+    backdrop-filter: blur(12px) saturate(1.15);
+    -webkit-backdrop-filter: blur(12px) saturate(1.15);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.65) inset,
+        0 0 0 1px rgba(255, 255, 255, 0.35) inset;
+}
+
+.hospital-soft-border{
+    border-color: rgba(186,230,253,0.75);
+}
+
+/* Daha düzenli kart ve odak halkası — Blade sınıflarıyla birlikte kullanılır */
+.surface-elevated{
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.04),
+        0 18px 44px -28px rgba(14, 165, 233, 0.35);
+}
+
+.ui-focus-ring:focus-visible{
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.22);
+    border-color: rgb(16, 185, 129);
+}
+
+@media (prefers-reduced-motion: no-preference){
+    .ui-soft-rise{
+        transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+    }
+    .ui-soft-rise:hover{
+        transform: translateY(-1px);
+    }
+}
