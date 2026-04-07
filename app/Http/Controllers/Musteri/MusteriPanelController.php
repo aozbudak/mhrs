@@ -6,6 +6,7 @@ use App\Enums\RandevuDurumu;
 use App\Enums\RandevuSlotDurumu;
 use App\Http\Controllers\Controller;
 use App\Models\Department;
+use App\Models\Hospital;
 use App\Support\MusteriAccess;
 use App\Models\Doctor;
 use App\Models\Randevu;
@@ -49,15 +50,104 @@ class MusteriPanelController extends Controller
 
     public function randevuAlForm(Request $request): View
     {
-        $departments = Department::query()
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get();
-
         $hospitalId = $request->integer('hospital_id') ?: null;
+        $city = $request->string('city')->trim()->value() ?: null;
+        $district = $request->string('district')->trim()->value() ?: null;
+
+        if ($hospitalId) {
+            $resolvedHospital = Hospital::query()
+                ->whereKey($hospitalId)
+                ->where('is_active', true)
+                ->first();
+            if ($resolvedHospital) {
+                $city = $resolvedHospital->city;
+                $hDistricts = $resolvedHospital->districts ?? [];
+                if ($district === null || $district === '' || ! in_array($district, $hDistricts, true)) {
+                    $district = $hDistricts[0] ?? null;
+                }
+            } else {
+                $hospitalId = null;
+            }
+        }
+
+        $cities = Hospital::query()
+            ->where('is_active', true)
+            ->whereNotNull('city')
+            ->where('city', '!=', '')
+            ->distinct()
+            ->orderBy('city')
+            ->pluck('city')
+            ->values();
+
+        $districts = collect();
+        if ($city) {
+            $districts = Hospital::query()
+                ->where('is_active', true)
+                ->where('city', $city)
+                ->get()
+                ->flatMap(fn (Hospital $h) => collect($h->districts ?? []))
+                ->map(fn ($d) => trim((string) $d))
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values();
+        }
+
+        $hospitals = collect();
+        if ($city) {
+            $hospitalsQuery = Hospital::query()
+                ->where('is_active', true)
+                ->where('city', $city);
+
+            if ($district) {
+                $hospitalsQuery->where(function ($w) use ($district) {
+                    $w->whereJsonContains('districts', $district)
+                        ->orWhereNull('districts')
+                        ->orWhereJsonLength('districts', 0);
+                });
+            }
+
+            $hospitals = $hospitalsQuery->orderBy('name')->get();
+        }
+
+        $departments = collect();
+        if ($hospitalId) {
+            $departments = Department::query()
+                ->where('is_active', true)
+                ->whereHas('doctors', function ($q) use ($hospitalId) {
+                    $q->where('hospital_id', $hospitalId)->where('is_active', true);
+                })
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get();
+        }
+
         $departmentId = $request->integer('department_id') ?: null;
         $doctorId = $request->integer('doctor_id') ?: null;
+
+        if (! $hospitalId) {
+            $departmentId = null;
+            $doctorId = null;
+        } else {
+            $allowedDepartmentIds = $departments->pluck('id');
+            if ($departmentId && ! $allowedDepartmentIds->contains($departmentId)) {
+                $departmentId = null;
+                $doctorId = null;
+            }
+        }
+
+        if ($doctorId && $hospitalId && $departmentId) {
+            $doctorOk = Doctor::query()
+                ->whereKey($doctorId)
+                ->where('hospital_id', $hospitalId)
+                ->where('department_id', $departmentId)
+                ->where('is_active', true)
+                ->exists();
+            if (! $doctorOk) {
+                $doctorId = null;
+            }
+        }
+
         $selectedDateStr = $request->string('randevu_date') ?: null;
 
         $selectedDate = null;
@@ -70,9 +160,10 @@ class MusteriPanelController extends Controller
         }
 
         $doctors = collect();
-        if ($departmentId) {
+        if ($departmentId && $hospitalId) {
             $doctors = Doctor::query()
                 ->where('department_id', $departmentId)
+                ->where('hospital_id', $hospitalId)
                 ->where('is_active', true)
                 ->with(['user', 'department'])
                 ->orderBy('title')
@@ -87,7 +178,9 @@ class MusteriPanelController extends Controller
                 ->where('durum', RandevuSlotDurumu::Musait)
                 ->where('baslangic', '>', now())
                 ->whereBetween('baslangic', [now(), now()->addDays(14)->endOfDay()])
-                ->whereDoesntHave('randevu')
+                ->whereDoesntHave('randevu', function ($q) {
+                    $q->where('durum', '!=', RandevuDurumu::Iptal);
+                })
                 ->orderBy('baslangic')
                 ->get();
 
@@ -110,6 +203,11 @@ class MusteriPanelController extends Controller
 
         return view('musteri.randevu-al', compact(
             'hospitalId',
+            'city',
+            'district',
+            'cities',
+            'districts',
+            'hospitals',
             'departments',
             'departmentId',
             'doctorId',
@@ -229,7 +327,7 @@ class MusteriPanelController extends Controller
                 ]);
             }
 
-            if ($slot->randevu()->exists()) {
+            if ($slot->randevu()->where('durum', '!=', RandevuDurumu::Iptal)->exists()) {
                 throw ValidationException::withMessages([
                     'randevu_slot_id' => 'Bu saat dolu.',
                 ]);
