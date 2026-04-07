@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\RandevuDurumu;
 use App\Http\Controllers\Controller;
+use App\Models\Doctor;
+use App\Models\Hospital;
 use App\Models\Randevu;
 use Illuminate\View\View;
 
@@ -23,7 +25,23 @@ class AdminPanelController extends Controller
             })
             ->count();
 
-        $bekleyenToplam = Randevu::query()->where('durum', RandevuDurumu::Bekliyor)->count();
+        $bekleyenToplam = Randevu::query()
+            ->whereIn('durum', [RandevuDurumu::Bekliyor, RandevuDurumu::Onaylandi])
+            ->count();
+
+        $doktorSayisi = Doctor::query()->where('is_active', true)->count();
+        $hastaneSayisi = Hospital::query()->where('is_active', true)->count();
+
+        $tamamlananBugun = Randevu::query()
+            ->where('durum', RandevuDurumu::Tamamlandi)
+            ->whereHas('slot', function ($q) use ($todayStart, $todayEnd) {
+                $q->whereBetween('baslangic', [$todayStart, $todayEnd]);
+            })
+            ->count();
+
+        $dolulukOraniBugun = $todayCount > 0
+            ? (int) round(($tamamlananBugun / $todayCount) * 100)
+            : 0;
 
         $todayTimeline = Randevu::query()
             ->select('randevular.*')
@@ -38,8 +56,11 @@ class AdminPanelController extends Controller
         return view('admin.panel', compact(
             'todayCount',
             'bekleyenToplam',
+            'doktorSayisi',
+            'hastaneSayisi',
+            'tamamlananBugun',
+            'dolulukOraniBugun',
             'todayTimeline',
         ));
     }
 }
-

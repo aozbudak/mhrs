@@ -14,13 +14,13 @@
     <div class="hospital-grain" aria-hidden="true"></div>
     <div class="relative z-10 mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12 hospital-content-enter">
         @if (session('error'))
-            <div class="mx-auto mb-6 max-w-xl rounded-lg border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-900 hospital-glass">
+            <div class="mx-auto mb-6 max-w-md rounded-2xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-900 hospital-glass">
                 {{ session('error') }}
             </div>
         @endif
 
         @if ($errors->any())
-            <div class="mx-auto mb-6 max-w-xl rounded-lg border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-900 hospital-glass">
+            <div class="mx-auto mb-6 max-w-md rounded-2xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-900 hospital-glass">
                 <ul class="list-inside list-disc space-y-1">
                     @foreach ($errors->all() as $err)
                         <li>{{ $err }}</li>

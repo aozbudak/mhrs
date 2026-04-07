@@ -22,6 +22,7 @@ class DoctorFactory extends Factory
             'license_number' => fake()->optional(0.7)->numerify('########'),
             'bio' => fake()->optional(0.4)->paragraph(),
             'is_active' => true,
+            'is_aile_hekimi' => false,
         ];
     }
 

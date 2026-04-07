@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\Doctor;
+use App\Models\Hospital;
 use App\Models\User;
+use App\Services\DoctorRandevuSlotGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +20,7 @@ class AdminDoctorController extends Controller
     public function index(): View
     {
         $doktorlar = Doctor::query()
-            ->with(['user', 'department'])
+            ->with(['user', 'department', 'hospital'])
             ->orderByDesc('is_active')
             ->orderBy('department_id')
             ->orderBy('id')
@@ -27,66 +29,6 @@ class AdminDoctorController extends Controller
         return view('admin.doktorlar.index', [
             'doktorlar' => $doktorlar,
         ]);
-    }
-
-    public function create(): View
-    {
-        $departments = Department::query()
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get();
-
-        return view('admin.doktorlar.create', [
-            'departments' => $departments,
-        ]);
-    }
-
-    public function store(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:'.User::class],
-            'password' => ['required', 'confirmed', Password::defaults()],
-            'tc_kimlik_no' => ['nullable', 'string', 'size:11', 'unique:'.User::class.',tc_kimlik_no'],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'department_id' => ['required', 'integer', 'exists:departments,id'],
-            'title' => ['nullable', 'string', 'max:64'],
-            'license_number' => ['nullable', 'string', 'max:64'],
-            'bio' => ['nullable', 'string', 'max:5000'],
-            'is_active' => ['nullable', 'boolean'],
-        ]);
-
-        $tc = $validated['tc_kimlik_no'] ?? null;
-        if (! $tc) {
-            $tc = $this->generateUniqueTcKimlik($validated['email']);
-        }
-
-        DB::transaction(function () use ($validated, $tc, $request) {
-            $user = User::query()->create([
-                'name' => $validated['name'],
-                'email' => $validated['email'],
-                'tc_kimlik_no' => $tc,
-                'phone' => $validated['phone'] ?? null,
-                'birth_date' => null,
-                'gender' => null,
-                'role' => 'doctor',
-                'password' => $validated['password'],
-            ]);
-
-            Doctor::query()->create([
-                'user_id' => $user->id,
-                'department_id' => $validated['department_id'],
-                'title' => $validated['title'] ?? null,
-                'license_number' => $validated['license_number'] ?? null,
-                'bio' => $validated['bio'] ?? null,
-                'is_active' => $request->boolean('is_active', true),
-            ]);
-        });
-
-        return redirect()
-            ->route('admin.doktorlar.index')
-            ->with('success', 'Doktor hesabı oluşturuldu.');
     }
 
     public function edit(Doctor $doktor): View|RedirectResponse
@@ -105,10 +47,17 @@ class AdminDoctorController extends Controller
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
+        $hospitals = Hospital::query()
+            ->where(function ($q) use ($doktor) {
+                $q->where('is_active', true)->orWhere('id', $doktor->hospital_id);
+            })
+            ->orderBy('name')
+            ->get();
 
         return view('admin.doktorlar.edit', [
             'doktor' => $doktor,
             'departments' => $departments,
+            'hospitals' => $hospitals,
         ]);
     }
 
@@ -129,16 +78,22 @@ class AdminDoctorController extends Controller
             'tc_kimlik_no' => ['nullable', 'string', 'size:11', Rule::unique(User::class, 'tc_kimlik_no')->ignore($userId)],
             'phone' => ['nullable', 'string', 'max:20'],
             'department_id' => ['required', 'integer', 'exists:departments,id'],
+            'hospital_id' => ['required', 'integer', 'exists:hospitals,id'],
+            'physical_clinic_name' => ['nullable', 'string', 'max:120'],
+            'room_no' => ['nullable', 'string', 'max:32'],
             'title' => ['nullable', 'string', 'max:64'],
             'license_number' => ['nullable', 'string', 'max:64'],
             'bio' => ['nullable', 'string', 'max:5000'],
             'is_active' => ['nullable', 'boolean'],
+            'is_aile_hekimi' => ['nullable', 'boolean'],
         ]);
 
         $tc = $validated['tc_kimlik_no'] ?? null;
         if (! $tc) {
             $tc = $doktor->user->tc_kimlik_no ?? $this->generateUniqueTcKimlik($validated['email']);
         }
+
+        $previousHospitalId = $doktor->hospital_id;
 
         DB::transaction(function () use ($validated, $tc, $request, $doktor) {
             $userData = [
@@ -154,12 +109,27 @@ class AdminDoctorController extends Controller
 
             $doktor->update([
                 'department_id' => $validated['department_id'],
+                'hospital_id' => $validated['hospital_id'],
+                'physical_clinic_name' => $validated['physical_clinic_name'] ?? null,
+                'room_no' => $validated['room_no'] ?? null,
                 'title' => $validated['title'] ?? null,
                 'license_number' => $validated['license_number'] ?? null,
                 'bio' => $validated['bio'] ?? null,
                 'is_active' => $request->boolean('is_active', true),
+                'is_aile_hekimi' => $request->boolean('is_aile_hekimi'),
             ]);
         });
+
+        $doktor->refresh();
+        $generator = app(DoctorRandevuSlotGenerator::class);
+        if ((int) $previousHospitalId !== (int) $doktor->hospital_id) {
+            if ($previousHospitalId) {
+                $generator->resyncFutureSlotsForHospital((int) $previousHospitalId);
+            }
+            if ($doktor->hospital_id) {
+                $generator->resyncFutureSlotsForHospital((int) $doktor->hospital_id);
+            }
+        }
 
         return redirect()
             ->route('admin.doktorlar.index')

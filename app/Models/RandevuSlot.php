@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\RandevuSlotDurumu;
+use App\Enums\RandevuSlotTipi;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -16,6 +18,7 @@ class RandevuSlot extends Model
         'baslangic',
         'bitis',
         'durum',
+        'slot_tipi',
         'gunluk_degisim_id',
     ];
 
@@ -25,7 +28,23 @@ class RandevuSlot extends Model
             'baslangic' => 'datetime',
             'bitis' => 'datetime',
             'durum' => RandevuSlotDurumu::class,
+            'slot_tipi' => RandevuSlotTipi::class,
         ];
+    }
+
+    /**
+     * Öncelikli olmayan hastalar yalnızca normal slotları görür / seçebilir.
+     */
+    public function scopeVisibleForPatient(Builder $query, bool $oncelikliHasta): void
+    {
+        if ($oncelikliHasta) {
+            return;
+        }
+
+        $query->where(function (Builder $w) {
+            $w->whereNull('slot_tipi')
+                ->orWhere('slot_tipi', RandevuSlotTipi::Normal);
+        });
     }
 
     public function doctor(): BelongsTo

@@ -46,16 +46,32 @@
                                class="mt-1.5 w-full cursor-not-allowed rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-600"
                                aria-readonly="true">
                     </div>
+                <div>
+                    <label for="phone" class="block text-xs font-bold text-sky-700">Telefon</label>
+                    <input id="phone" name="phone" type="text" value="{{ old('phone', $user->phone) }}"
+                           class="mt-1.5 w-full rounded-2xl border border-sky-100 bg-white/80 px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none ring-sky-200 focus:ring-2"
+                           autocomplete="tel">
+                </div>
                     <div>
-                        <label for="phone" class="block text-xs font-bold text-sky-700">Telefon</label>
-                        <input id="phone" name="phone" type="text" value="{{ old('phone', $user->phone) }}"
-                               class="mt-1.5 w-full rounded-2xl border border-sky-100 bg-white/80 px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none ring-sky-200 focus:ring-2"
-                               autocomplete="tel">
+                        <label for="birth_date_display" class="block text-xs font-bold text-sky-700">Doğum tarihi</label>
+                        <input id="birth_date_display" type="text" readonly value="{{ $user->birth_date?->format('d.m.Y') ?? '—' }}"
+                               class="mt-1.5 w-full cursor-not-allowed rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-600"
+                               aria-readonly="true">
+                        <p class="mt-1 text-[11px] text-slate-500">Kayıt sırasında belirlenir; değiştirilemez.</p>
                     </div>
-                    <div>
-                        <label for="birth_date" class="block text-xs font-bold text-sky-700">Doğum tarihi</label>
-                        <input id="birth_date" name="birth_date" type="date" value="{{ old('birth_date', $user->birth_date?->format('Y-m-d')) }}"
-                               class="mt-1.5 w-full rounded-2xl border border-sky-100 bg-white/80 px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none ring-sky-200 focus:ring-2">
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-sky-700">Öncelikli hasta bilgisi</label>
+                        <div class="mt-1.5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700">
+                            @if($user->engelli)
+                                <span class="font-semibold text-emerald-800">Kayıtta engelli olarak bildirildi.</span>
+                            @else
+                                <span>Kayıtta engelli olarak bildirilmedi.</span>
+                            @endif
+                            @if($user->birth_date && $user->birth_date->diffInYears(now()) >= \App\Models\User::ONCELIKLI_YAS_ESIGI)
+                                <span class="mt-1 block text-xs text-slate-600">{{ \App\Models\User::ONCELIKLI_YAS_ESIGI }} yaş ve üzeri (doğum tarihine göre) öncelik kapsamındasınız.</span>
+                            @endif
+                        </div>
+                        <p class="mt-1 text-[11px] text-slate-500">Bu alanlar güvenlik ve tutarlılık için yalnızca kayıt ekranından belirlenir.</p>
                     </div>
                     <div class="sm:col-span-2">
                         <label for="gender" class="block text-xs font-bold text-sky-700">Cinsiyet</label>

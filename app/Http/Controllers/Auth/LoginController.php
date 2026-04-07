@@ -77,7 +77,7 @@ class LoginController extends Controller
         }
 
         if ($user->isPatient()) {
-            Auth::guard('web')->login($user, $request->boolean('remember'));
+            Auth::guard('patient')->login($user, $request->boolean('remember'));
 
             return redirect()->intended(route('musteri.panel'));
         }
@@ -87,6 +87,7 @@ class LoginController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
+        Auth::guard('patient')->logout();
         Auth::guard('web')->logout();
         $request->session()->regenerateToken();
 

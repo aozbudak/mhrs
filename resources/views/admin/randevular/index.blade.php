@@ -11,7 +11,8 @@
                     <select name="durum" id="durum" class="mt-1 rounded-2xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm">
                         <option value="aktif" @selected($durumFilter === 'aktif')>Aktif (iptal hariç)</option>
                         <option value="all" @selected($durumFilter === 'all')>Tümü</option>
-                        <option value="bekliyor" @selected($durumFilter === 'bekliyor')>Bekliyor</option>
+                        <option value="bekliyor" @selected($durumFilter === 'bekliyor')>Bekliyor / onaylı</option>
+                        <option value="onaylandi" @selected($durumFilter === 'onaylandi')>Yalnızca onaylandı</option>
                         <option value="tamamlandi" @selected($durumFilter === 'tamamlandi')>Tamamlandı</option>
                         <option value="iptal" @selected($durumFilter === 'iptal')>İptal</option>
                         <option value="gelmedi" @selected($durumFilter === 'gelmedi')>Gelmedi</option>
@@ -41,6 +42,7 @@
                             $durumRaw = $a->getRawOriginal('durum') ?? 'bekliyor';
                             $badgeClass = match ($durumRaw) {
                                 'bekliyor' => 'bg-amber-100 text-amber-900',
+                                'onaylandi' => 'bg-teal-100 text-teal-900',
                                 'tamamlandi' => 'bg-emerald-100 text-emerald-900',
                                 'iptal' => 'bg-sky-200 text-sky-950',
                                 'gelmedi' => 'bg-rose-100 text-rose-900',
@@ -48,6 +50,7 @@
                             };
                             $durumLabel = match ($durumRaw) {
                                 'bekliyor' => 'Bekliyor',
+                                'onaylandi' => 'Onaylandı',
                                 'tamamlandi' => 'Tamamlandı',
                                 'iptal' => 'İptal',
                                 'gelmedi' => 'Gelmedi',

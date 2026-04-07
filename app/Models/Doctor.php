@@ -16,16 +16,21 @@ class Doctor extends Model
     protected $fillable = [
         'user_id',
         'department_id',
+        'hospital_id',
+        'physical_clinic_name',
+        'room_no',
         'title',
         'license_number',
         'bio',
         'is_active',
+        'is_aile_hekimi',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'is_aile_hekimi' => 'boolean',
         ];
     }
 
@@ -39,9 +44,9 @@ class Doctor extends Model
         return $this->belongsTo(Department::class);
     }
 
-    public function workingHours(): HasMany
+    public function hospital(): BelongsTo
     {
-        return $this->hasMany(DoctorWorkingHour::class)->orderBy('weekday')->orderBy('sort_order');
+        return $this->belongsTo(Hospital::class);
     }
 
     public function gunlukDegisimler(): HasMany

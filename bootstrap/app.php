@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Middleware\EnsureAdmin;
+use App\Http\Middleware\EnsurePatient;
+use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,17 +15,17 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'patient' => \App\Http\Middleware\EnsurePatient::class,
-            'admin' => \App\Http\Middleware\EnsureAdmin::class,
+            'patient' => EnsurePatient::class,
+            'admin' => EnsureAdmin::class,
         ]);
         $middleware->redirectUsersTo(function () {
-            $webUser = auth('web')->user();
-            if ($webUser instanceof \App\Models\User && $webUser->isPatient()) {
+            $patientUser = auth('patient')->user();
+            if ($patientUser instanceof User && $patientUser->isPatient()) {
                 return route('musteri.panel');
             }
 
             $adminUser = auth('admin')->user();
-            if ($adminUser instanceof \App\Models\User && $adminUser->isAdmin()) {
+            if ($adminUser instanceof User && $adminUser->isAdmin()) {
                 return route('admin.panel');
             }
 

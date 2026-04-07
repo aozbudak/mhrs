@@ -14,7 +14,7 @@ class EnsurePatient
         if (! MusteriAccess::allows($request)) {
             return redirect()
                 ->route('login')
-                ->with('error', 'Bu alan yalnızca hastalar veya yetkili yöneticiler içindir. Lütfen giriş yapın.');
+                ->with('error', 'Bu alan yalnızca hasta hesapları içindir.');
         }
 
         return $next($request);

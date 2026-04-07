@@ -7,19 +7,14 @@ use Illuminate\Http\Request;
 
 final class MusteriAccess
 {
-    /** Hasta oturumu (web) varsa onu; yoksa yalnız yönetici (admin) oturumunu döner. */
+    /** Sadece hasta guard oturumundaki kullanıcıyı döner. */
     public static function user(?Request $request = null): ?User
     {
         $request ??= request();
 
-        $web = $request->user('web');
-        if ($web instanceof User && $web->isPatient()) {
-            return $web;
-        }
-
-        $admin = $request->user('admin');
-        if ($admin instanceof User && $admin->isAdmin()) {
-            return $admin;
+        $patient = $request->user('patient');
+        if ($patient instanceof User && $patient->isPatient()) {
+            return $patient;
         }
 
         return null;

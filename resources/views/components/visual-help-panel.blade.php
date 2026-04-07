@@ -6,7 +6,7 @@
 
 @php
     $steps = [
-        ['n' => 1, 't' => 'Hastane', 'd' => 'Hizmet alacağınız hastaneyi listeden seçin.'],
+        ['n' => 1, 't' => 'İl, ilçe, hastane', 'd' => 'İsterseniz “Konumuma göre” ile yakın hastaneleri sıralayın; ya da il/ilçe seçip listeden hastaneye tıklayın. Poliklinikler hastane seçilince açılır.'],
         ['n' => 2, 't' => 'Birim', 'd' => 'Poliklinik veya bölümü seçin; liste yöneticiden gelir.'],
         ['n' => 3, 't' => 'Doktor', 'd' => 'Uygun hekimi seçin; yoksa birimi değiştirin.'],
         ['n' => 4, 't' => 'Tarih & saat', 'd' => 'Müsait gün ve saatten birini işaretleyip onaylayın.'],

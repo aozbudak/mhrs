@@ -154,6 +154,60 @@
                 </div>
 
                 <div>
+                    <label for="birth_date" class="mb-1 block text-sm font-medium text-slate-700">Doğum tarihi <span class="text-rose-600">*</span></label>
+                    <input
+                        type="date"
+                        name="birth_date"
+                        id="birth_date"
+                        value="{{ old('birth_date') }}"
+                        required
+                        max="{{ now()->format('Y-m-d') }}"
+                        class="w-full rounded-2xl border border-sky-200 bg-white/80 px-4 py-2.5 text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/15"
+                    >
+                    @error('birth_date')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    <p id="oncelik_yas_uyari" class="mt-1 hidden text-xs font-medium text-emerald-800">Doğum tarihinize göre {{ \App\Models\User::ONCELIKLI_YAS_ESIGI }} yaş üstü olduğunuz için öncelikli hasta statünüz otomatik uygulanır.</p>
+                    <p class="mt-1 text-xs text-slate-500">18 yaşından küçük hastalar için veli T.C. alanı açılır; nüfus kaydıyla uyumlu olmalıdır. Öncelikli hasta bilgisi kayıtla sabittir, sonra değiştirilemez.</p>
+                </div>
+
+                <fieldset class="rounded-2xl border border-sky-200 bg-white/60 px-4 py-3">
+                    <legend class="px-1 text-sm font-semibold text-slate-800">Engel durumu <span class="text-rose-600">*</span></legend>
+                    <p class="mt-1 text-xs text-slate-600">Engelli hastaysanız öncelikli randevu slotlarına erişebilirsiniz. Bu seçim kayıt sonrası değiştirilemez; lütfen doğru beyan edin.</p>
+                    <div class="mt-3 flex flex-wrap gap-4 text-sm text-slate-800">
+                        <label class="inline-flex cursor-pointer items-center gap-2">
+                            <input type="radio" name="engelli" value="0" class="h-4 w-4 border-sky-300 text-emerald-600 focus:ring-emerald-500" @checked(old('engelli', '0') === '0' || old('engelli', '0') === 0) required>
+                            Hayır
+                        </label>
+                        <label class="inline-flex cursor-pointer items-center gap-2">
+                            <input type="radio" name="engelli" value="1" class="h-4 w-4 border-sky-300 text-emerald-600 focus:ring-emerald-500" @checked(old('engelli') === '1' || old('engelli') === 1)>
+                            Evet, engelli hastayım
+                        </label>
+                    </div>
+                    @error('engelli')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </fieldset>
+
+                <div id="veli_tc_wrap" class="hidden space-y-1">
+                    <label for="veli_tc_kimlik_no" class="mb-1 block text-sm font-medium text-slate-700">Veli / vasi T.C. kimlik no <span id="veli_required_badge" class="hidden text-rose-600">*</span></label>
+                    <input
+                        type="text"
+                        name="veli_tc_kimlik_no"
+                        id="veli_tc_kimlik_no"
+                        value="{{ old('veli_tc_kimlik_no') }}"
+                        inputmode="numeric"
+                        maxlength="11"
+                        autocomplete="off"
+                        placeholder="11 hane — veli hesabı sistemde kayıtlı olmalı"
+                        class="w-full rounded-2xl border border-sky-200 bg-white/80 px-4 py-2.5 text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/15"
+                    >
+                    @error('veli_tc_kimlik_no')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div>
                     <label for="email" class="mb-1 block text-sm font-medium text-slate-700">E-posta</label>
                     <div class="relative">
                         <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sky-600">
@@ -216,6 +270,56 @@
                     </div>
                 </div>
 
+                <div class="rounded-2xl border border-sky-100 bg-sky-50/50 p-4 space-y-4">
+                    <label class="flex cursor-pointer items-start gap-3">
+                        <input type="checkbox" name="sec_aile_hekimi" value="1" id="sec_aile_hekimi" class="mt-1 h-4 w-4 rounded border-sky-300"
+                               @checked(old('sec_aile_hekimi'))>
+                        <span class="text-sm text-slate-800">
+                            <span class="font-semibold">Aile hekimi seçmek istiyorum</span>
+                            <span class="mt-0.5 block text-xs leading-relaxed text-slate-600">Kayıtta girdiğiniz il ve ilçeye göre hastane konumları kullanılarak en yakın aile hekimleri sıralanır.</span>
+                        </span>
+                    </label>
+
+                    <div id="aile-hekim-fields" class="space-y-3 @unless(old('sec_aile_hekimi')) hidden @endunless">
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <label for="patient_city" class="mb-1 block text-sm font-medium text-slate-700">İl</label>
+                                <select name="patient_city" id="patient_city"
+                                        class="w-full rounded-2xl border border-sky-200 bg-white/80 px-4 py-2.5 text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/15">
+                                    <option value="">İl seçin</option>
+                                    @foreach ($cities as $c)
+                                        <option value="{{ $c }}" @selected(old('patient_city') === $c)>{{ $c }}</option>
+                                    @endforeach
+                                </select>
+                                @error('patient_city')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div id="patient_district_wrap">
+                                <label for="patient_district" class="mb-1 block text-sm font-medium text-slate-700">İlçe</label>
+                                <select name="patient_district" id="patient_district"
+                                        class="w-full rounded-2xl border border-sky-200 bg-white/80 px-4 py-2.5 text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/15">
+                                    <option value="">Önce il seçin</option>
+                                </select>
+                                <p id="patient_district_hint" class="mt-1 hidden text-xs text-slate-500">Bu il için ilçe listesi yok; öneriler il geneline göre yapılır.</p>
+                                @error('patient_district')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div>
+                            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Yakın aile hekimleri</p>
+                            <div id="aile-hekim-list" class="min-h-[3rem] rounded-2xl border border-dashed border-sky-200 bg-white/60 px-3 py-3 text-sm text-slate-600">
+                                İl (ve varsa ilçe) seçtikten sonra liste burada görünür.
+                            </div>
+                            @error('aile_hekimi_doctor_id')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+
                 <button
                     type="submit"
                     class="w-full rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-500/20 transition"
@@ -230,4 +334,231 @@
             </p>
         </section>
     </div>
+
+    <script>
+        (function () {
+            var routes = {
+                ilceler: @json(route('register.ilceler')),
+                aileHekimleri: @json(route('register.aile-hekimleri'))
+            };
+            var oldCity = @json(old('patient_city'));
+            var oldDistrict = @json(old('patient_district'));
+            var oldDoctorId = @json(old('aile_hekimi_doctor_id'));
+
+            var chk = document.getElementById('sec_aile_hekimi');
+            var fields = document.getElementById('aile-hekim-fields');
+            var selCity = document.getElementById('patient_city');
+            var selDistrict = document.getElementById('patient_district');
+            var districtHint = document.getElementById('patient_district_hint');
+            var districtWrap = document.getElementById('patient_district_wrap');
+            var listEl = document.getElementById('aile-hekim-list');
+            var form = chk.closest('form');
+
+            if (!chk || !fields || !selCity || !selDistrict || !listEl || !form) return;
+
+            form.addEventListener('submit', function () {
+                if (!chk.checked) {
+                    selCity.disabled = true;
+                    selDistrict.disabled = true;
+                    listEl.querySelectorAll('input[name="aile_hekimi_doctor_id"]').forEach(function (inp) {
+                        inp.disabled = true;
+                    });
+                }
+            });
+
+            function toggleFields() {
+                if (chk.checked) {
+                    fields.classList.remove('hidden');
+                } else {
+                    fields.classList.add('hidden');
+                }
+            }
+
+            function setListLoading() {
+                listEl.textContent = 'Yükleniyor…';
+            }
+
+            function setListMessage(msg) {
+                listEl.textContent = msg;
+            }
+
+            function renderDoctors(rows) {
+                listEl.innerHTML = '';
+                if (!rows || !rows.length) {
+                    setListMessage('Bu kriterlere uygun kayıtlı aile hekimi bulunamadı.');
+                    return;
+                }
+                var ul = document.createElement('div');
+                ul.className = 'space-y-2';
+                rows.forEach(function (d) {
+                    var label = document.createElement('label');
+                    label.className = 'flex cursor-pointer items-start gap-3 rounded-xl border border-sky-100 bg-white/80 px-3 py-2.5 hover:border-emerald-200';
+                    var input = document.createElement('input');
+                    input.type = 'radio';
+                    input.name = 'aile_hekimi_doctor_id';
+                    input.value = String(d.id);
+                    input.className = 'mt-1 h-4 w-4 border-sky-300 text-emerald-600 focus:ring-emerald-500';
+                    if (oldDoctorId && String(oldDoctorId) === String(d.id)) {
+                        input.checked = true;
+                    }
+                    var span = document.createElement('span');
+                    span.className = 'text-sm text-slate-800';
+                    var distPart = d.distance_km != null ? ' · yaklaşık ' + d.distance_km + ' km' : '';
+                    span.innerHTML = '<span class="font-semibold">' + escapeHtml(d.name) + '</span>' +
+                        '<span class="block text-xs text-slate-600">' + escapeHtml(d.hospital_name) + distPart + '</span>';
+                    label.appendChild(input);
+                    label.appendChild(span);
+                    ul.appendChild(label);
+                });
+                listEl.appendChild(ul);
+            }
+
+            function escapeHtml(s) {
+                var div = document.createElement('div');
+                div.textContent = s;
+                return div.innerHTML;
+            }
+
+            function loadDistricts() {
+                var city = selCity.value;
+                selDistrict.innerHTML = '';
+                districtHint.classList.add('hidden');
+                selDistrict.disabled = !city;
+                if (!city) {
+                    var o0 = document.createElement('option');
+                    o0.value = '';
+                    o0.textContent = 'Önce il seçin';
+                    selDistrict.appendChild(o0);
+                    setListMessage('İl seçtikten sonra ilçe ve aile hekimi listesi yüklenir.');
+                    return;
+                }
+                fetch(routes.ilceler + '?city=' + encodeURIComponent(city), { headers: { 'Accept': 'application/json' } })
+                    .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+                    .then(function (x) {
+                        if (!x.ok) {
+                            selDistrict.appendChild(new Option('—', ''));
+                            return;
+                        }
+                        var districts = x.j.districts || [];
+                        if (!districts.length) {
+                            districtHint.classList.remove('hidden');
+                            selDistrict.disabled = true;
+                            var optAll = document.createElement('option');
+                            optAll.value = '';
+                            optAll.textContent = 'İl geneli';
+                            selDistrict.appendChild(optAll);
+                            loadAileHekimleri();
+                            return;
+                        }
+                        selDistrict.disabled = false;
+                        selDistrict.appendChild(new Option('İlçe seçin', ''));
+                        districts.forEach(function (d) {
+                            var opt = document.createElement('option');
+                            opt.value = d;
+                            opt.textContent = d;
+                            if (oldDistrict && oldDistrict === d) opt.selected = true;
+                            selDistrict.appendChild(opt);
+                        });
+                        if (selDistrict.value) {
+                            loadAileHekimleri();
+                        } else {
+                            setListMessage('İlçe seçtikten sonra liste yüklenir.');
+                        }
+                    })
+                    .catch(function () {
+                        setListMessage('İlçe listesi yüklenemedi.');
+                    });
+            }
+
+            function loadAileHekimleri() {
+                var city = selCity.value;
+                if (!city) return;
+                var district = selDistrict.disabled ? '' : selDistrict.value;
+                if (!selDistrict.disabled && !district) {
+                    setListMessage('İlçe seçtikten sonra liste yüklenir.');
+                    return;
+                }
+                setListLoading();
+                var q = 'city=' + encodeURIComponent(city) + '&district=' + encodeURIComponent(district);
+                fetch(routes.aileHekimleri + '?' + q, { headers: { 'Accept': 'application/json' } })
+                    .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+                    .then(function (x) {
+                        if (!x.ok) {
+                            setListMessage(x.j.message || 'Liste yüklenemedi.');
+                            return;
+                        }
+                        renderDoctors(x.j.doctors || []);
+                    })
+                    .catch(function () {
+                        setListMessage('Aile hekimi listesi yüklenemedi.');
+                    });
+            }
+
+            chk.addEventListener('change', toggleFields);
+            selCity.addEventListener('change', function () {
+                oldDistrict = '';
+                loadDistricts();
+            });
+            selDistrict.addEventListener('change', loadAileHekimleri);
+
+            toggleFields();
+            if (chk.checked && oldCity && selCity.value === oldCity) {
+                loadDistricts();
+            }
+        })();
+    </script>
+    <script>
+        (function () {
+            var birthEl = document.getElementById('birth_date');
+            var veliWrap = document.getElementById('veli_tc_wrap');
+            var veliBadge = document.getElementById('veli_required_badge');
+            var oncelikUyari = document.getElementById('oncelik_yas_uyari');
+            var oncelikEsik = {{ (int) \App\Models\User::ONCELIKLI_YAS_ESIGI }};
+            if (!birthEl || !veliWrap) return;
+
+            function isUnder18(dStr) {
+                if (!dStr) return false;
+                var d = new Date(dStr + 'T12:00:00');
+                if (isNaN(d.getTime())) return false;
+                var limit = new Date();
+                limit.setFullYear(limit.getFullYear() - 18);
+                return d > limit;
+            }
+
+            function ageYears(dStr) {
+                if (!dStr) return null;
+                var d = new Date(dStr + 'T12:00:00');
+                if (isNaN(d.getTime())) return null;
+                var today = new Date();
+                var y = today.getFullYear() - d.getFullYear();
+                var m = today.getMonth() - d.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < d.getDate())) y--;
+                return y;
+            }
+
+            function syncVeli() {
+                var minor = isUnder18(birthEl.value);
+                var veliInp = document.getElementById('veli_tc_kimlik_no');
+                var hasVeli = veliInp && veliInp.value.replace(/\D/g, '').length > 0;
+                if (minor || hasVeli) {
+                    veliWrap.classList.remove('hidden');
+                } else {
+                    veliWrap.classList.add('hidden');
+                }
+                if (veliBadge) {
+                    if (minor) veliBadge.classList.remove('hidden');
+                    else veliBadge.classList.add('hidden');
+                }
+                if (oncelikUyari) {
+                    var a = ageYears(birthEl.value);
+                    if (a !== null && a >= oncelikEsik) oncelikUyari.classList.remove('hidden');
+                    else oncelikUyari.classList.add('hidden');
+                }
+            }
+
+            birthEl.addEventListener('change', syncVeli);
+            birthEl.addEventListener('input', syncVeli);
+            syncVeli();
+        })();
+    </script>
 @endsection

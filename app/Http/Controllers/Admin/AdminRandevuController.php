@@ -18,7 +18,7 @@ class AdminRandevuController extends Controller
     private function redirectToList(Request $request): RedirectResponse
     {
         $durum = $request->input('durum', 'aktif');
-        $allowed = ['aktif', 'all', 'bekliyor', 'tamamlandi', 'iptal', 'gelmedi'];
+        $allowed = ['aktif', 'all', 'bekliyor', 'onaylandi', 'tamamlandi', 'iptal', 'gelmedi'];
         if (! in_array($durum, $allowed, true)) {
             $durum = 'aktif';
         }
@@ -29,7 +29,7 @@ class AdminRandevuController extends Controller
     public function index(Request $request): View
     {
         $validated = $request->validate([
-            'durum' => ['nullable', 'in:aktif,all,bekliyor,tamamlandi,iptal,gelmedi'],
+            'durum' => ['nullable', 'in:aktif,all,bekliyor,onaylandi,tamamlandi,iptal,gelmedi'],
         ]);
 
         $durumFilter = $validated['durum'] ?? 'aktif';
@@ -40,6 +40,7 @@ class AdminRandevuController extends Controller
         match ($durumFilter) {
             'aktif' => $q->where('durum', '!=', RandevuDurumu::Iptal),
             'all' => null,
+            'bekliyor' => $q->whereIn('durum', [RandevuDurumu::Bekliyor, RandevuDurumu::Onaylandi]),
             default => $q->where('durum', $durumFilter),
         };
 
@@ -59,6 +60,10 @@ class AdminRandevuController extends Controller
     {
         if ($randevu->durum === RandevuDurumu::Tamamlandi) {
             return $this->redirectToList($request)->with('error', 'Bu randevu zaten tamamlandı olarak işaretli.');
+        }
+
+        if (in_array($randevu->durum, [RandevuDurumu::Iptal, RandevuDurumu::Gelmedi], true)) {
+            return $this->redirectToList($request)->with('error', 'Bu randevu tamamlanamaz.');
         }
 
         $randevu->update([

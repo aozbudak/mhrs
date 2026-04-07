@@ -4,7 +4,7 @@
 
 @section('custom_guest_header')
     @php
-        $navPatient = auth('web')->user();
+        $navPatient = auth('patient')->user();
         $navAdmin = auth('admin')->user();
         $navHasPatient = $navPatient instanceof \App\Models\User && $navPatient->isPatient();
         $navHasAdmin = $navAdmin instanceof \App\Models\User && $navAdmin->isAdmin();
@@ -45,13 +45,13 @@
                             @if ($navHasPatient)
                                 <form method="post" action="{{ route('logout') }}" class="inline">
                                     @csrf
-                                    <button type="submit" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">{{ $navHasAdmin ? 'Hasta çıkışı' : 'Çıkış' }}</button>
+                                    <button type="submit" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Çıkış</button>
                                 </form>
                             @endif
                             @if ($navHasAdmin)
                                 <form method="post" action="{{ route('admin.logout') }}" class="inline">
                                     @csrf
-                                    <button type="submit" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">{{ $navHasPatient ? 'Yönetim çıkışı' : 'Çıkış' }}</button>
+                                    <button type="submit" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Çıkış</button>
                                 </form>
                             @endif
                         @else
@@ -69,7 +69,7 @@
 
 @section('content')
     @php
-        $landingPatient = auth('web')->user();
+        $landingPatient = auth('patient')->user();
         $landingAdmin = auth('admin')->user();
         $landingHasPatient = $landingPatient instanceof \App\Models\User && $landingPatient->isPatient();
         $landingHasAdmin = $landingAdmin instanceof \App\Models\User && $landingAdmin->isAdmin();
@@ -118,7 +118,7 @@
                                     <form method="post" action="{{ route('logout') }}" class="inline">
                                         @csrf
                                         <button type="submit" class="inline-flex items-center justify-center rounded-2xl border border-white/35 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/15">
-                                            {{ $landingHasAdmin ? 'Hasta çıkışı' : 'Çıkış' }}
+                                            Çıkış
                                         </button>
                                     </form>
                                 @endif
@@ -126,7 +126,7 @@
                                     <form method="post" action="{{ route('admin.logout') }}" class="inline">
                                         @csrf
                                         <button type="submit" class="inline-flex items-center justify-center rounded-2xl border border-white/35 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/15">
-                                            {{ $landingHasPatient ? 'Yönetim çıkışı' : 'Çıkış' }}
+                                            Çıkış
                                         </button>
                                     </form>
                                 @endif
@@ -309,7 +309,7 @@
                                             >
                                                 Yönetim
                                             </a>
-                                    @elseif (auth('web')->check() || auth('admin')->check())
+                                    @elseif (auth('patient')->check() || auth('admin')->check())
                                             <span class="flex w-full cursor-not-allowed items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-400" aria-disabled="true">
                                                 Yetkisiz
                                             </span>
