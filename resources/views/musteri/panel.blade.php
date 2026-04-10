@@ -36,9 +36,15 @@
                     </ul>
                 </div>
             </div>
-            <a href="{{ route('musteri.randevu.al') }}" class="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-600/20 hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-500/25 transition">
-                Yeni randevu al
-            </a>
+            <div class="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+                <a href="{{ route('musteri.randevu.al') }}" class="inline-flex w-full items-center justify-center rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-600/20 hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-500/25 transition sm:w-auto">
+                    Yeni randevu al
+                </a>
+                <a href="{{ route('musteri.randevu.al', ['kurum_tipi' => 'saglik_merkezi']) }}" class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-teal-200/90 bg-white/90 px-4 py-2 text-sm font-semibold text-teal-900 shadow-sm transition hover:border-teal-300 hover:bg-teal-50/80 focus:outline-none focus:ring-4 focus:ring-teal-500/20 sm:w-auto">
+                    <svg class="h-4 w-4 shrink-0 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                    Sağlık merkezinden randevu
+                </a>
+            </div>
         </div>
     </div>
 
@@ -260,7 +266,7 @@
             </section>
         </div>
 
-        <section class="rounded-3xl border border-sky-100/80 bg-white/70 hospital-glass p-5 shadow-sm">
+        <section class="panel-inpage-sticky rounded-3xl border border-sky-100/80 bg-white/70 hospital-glass p-5 shadow-sm">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <div class="text-sm font-semibold text-slate-900">Son Randevular</div>

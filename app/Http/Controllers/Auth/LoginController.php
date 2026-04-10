@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Hospital;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,8 +21,8 @@ class LoginController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $loginAs = $request->input('login_as', 'patient');
-        if (! in_array($loginAs, ['patient', 'admin'], true)) {
+        $loginAs = strtolower(trim((string) $request->input('login_as', 'patient')));
+        if (! in_array($loginAs, ['patient', 'admin', 'hospital_admin'], true)) {
             $loginAs = 'patient';
         }
 
@@ -30,18 +31,43 @@ class LoginController extends Controller
         if ($loginAs === 'admin') {
             $data = $request->validate([
                 'login_as' => ['required', 'in:admin'],
-                'email' => ['required', 'string', 'email'],
+                'email' => ['required', 'string', 'email', 'max:255'],
                 'password' => ['required', 'string'],
             ]);
 
+            $emailNorm = strtolower(trim($data['email']));
+
             /** @var User|null $user */
             $user = User::query()
-                ->whereRaw('LOWER(email) = ?', [strtolower($data['email'])])
+                ->whereRaw('LOWER(TRIM(email)) = ?', [$emailNorm])
                 ->first();
 
             if (! $user || ! $user->isAdmin() || ! Hash::check($password, $user->getAuthPassword())) {
                 throw ValidationException::withMessages([
                     'email' => __('Yönetici giriş bilgileri eşleşmiyor.'),
+                ]);
+            }
+        } elseif ($loginAs === 'hospital_admin') {
+            $data = $request->validate([
+                'login_as' => ['required', 'in:hospital_admin'],
+                'email' => ['required', 'string', 'email', 'max:255'],
+                'password' => ['required', 'string'],
+            ]);
+
+            $emailNorm = strtolower(trim($data['email']));
+
+            /** @var User|null $user */
+            $user = User::query()
+                ->with('managedHospital')
+                ->whereRaw('LOWER(TRIM(email)) = ?', [$emailNorm])
+                ->first();
+
+            $managed = $user?->managedHospital;
+            $hasKurum = $user && ((int) $user->managed_hospital_id) > 0 && $managed instanceof Hospital;
+
+            if (! $user || ! $user->isHospitalAdmin() || ! $hasKurum || ! Hash::check($password, $user->getAuthPassword())) {
+                throw ValidationException::withMessages([
+                    'email' => __('Kurum paneli giriş bilgileri eşleşmiyor veya hesaba kurum atanmamış.'),
                 ]);
             }
         } else {
@@ -68,12 +94,29 @@ class LoginController extends Controller
             }
         }
 
+        Auth::guard('patient')->logout();
+        Auth::guard('admin')->logout();
+        Auth::guard('hospital')->logout();
+        Auth::guard('web')->logout();
+
         $request->session()->regenerate();
 
         if ($user->isAdmin()) {
             Auth::guard('admin')->login($user, $request->boolean('remember'));
 
             return redirect()->intended(route('admin.panel'));
+        }
+
+        if ($user->isHospitalAdmin()) {
+            Auth::guard('hospital')->login($user, $request->boolean('remember'));
+
+            $user->loadMissing('managedHospital');
+            $mh = $user->managedHospital;
+            $panelUrl = ($mh && $mh->is_saglik_merkezi)
+                ? route('saglik-merkezi.panel')
+                : route('hastane.panel');
+
+            return redirect()->intended($panelUrl);
         }
 
         if ($user->isPatient()) {
@@ -97,6 +140,14 @@ class LoginController extends Controller
     public function destroyAdmin(Request $request): RedirectResponse
     {
         Auth::guard('admin')->logout();
+        $request->session()->regenerateToken();
+
+        return redirect('/');
+    }
+
+    public function destroyHospital(Request $request): RedirectResponse
+    {
+        Auth::guard('hospital')->logout();
         $request->session()->regenerateToken();
 
         return redirect('/');

@@ -14,6 +14,9 @@
         ]);
         $ahMerge = fn (array $params) => array_filter(array_merge($params, $randevuAlStickyParams));
         $ru = fn (array $params = []) => route('musteri.randevu.al', array_filter(array_merge($params, $proxyQ)));
+        $randevuAlGenelUrl = route('musteri.randevu.al', array_filter([
+            'hasta_id' => ! empty($proxyHastaId) ? (int) $proxyHastaId : null,
+        ]));
         if ($aileHekimiOdak) {
             $activeStep = 4;
         } else {
@@ -31,34 +34,20 @@
         $selectedDateValue = $selectedDate?->format('Y-m-d') ?? '';
     @endphp
 
-    <div class="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr),minmax(260px,340px)] lg:items-start lg:gap-8">
-        @unless ($aileHekimiOdak)
-        <aside class="order-1 lg:order-2 lg:col-start-2 lg:row-start-1 lg:min-w-0" aria-label="Görsel yardım ve ipuçları">
-            <div class="lg:hidden mb-2">
-                <p class="text-xs font-semibold uppercase tracking-wide text-sky-700">Görsel yardım</p>
-                <p class="mt-0.5 text-xs text-slate-500">Özet adımlar ve küçük çizimle randevu akışını hızlıca hatırlayın.</p>
-            </div>
-            <x-visual-help-panel sticky class="max-lg:shadow-lg" />
-        </aside>
-        @endunless
-
-        <div class="order-2 min-w-0 space-y-6 lg:order-1 lg:col-start-1 lg:row-start-1 @if($aileHekimiOdak) lg:col-span-2 @endif">
-    <div class="mb-0 rounded-3xl border border-sky-100/80 bg-white/75 hospital-glass p-5 shadow-sm surface-elevated ui-soft-rise sm:p-6">
-        <div class="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+    <div class="w-full max-w-4xl space-y-3">
+    <div class="mb-0 rounded-2xl border border-sky-100/80 bg-white/75 hospital-glass p-4 shadow-sm surface-elevated ui-soft-rise sm:p-5">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div class="relative">
                 <div class="absolute -left-1 top-0 h-9 w-1 rounded-full bg-gradient-to-b from-sky-500 to-emerald-500 opacity-90" aria-hidden="true"></div>
-                <h1 class="pl-3 text-2xl font-extrabold tracking-tight text-sky-950">
+                <h1 class="pl-3 text-xl font-extrabold tracking-tight text-sky-950 sm:text-2xl">
                     @if($aileHekimiOdak) Aile hekiminizle randevu @else Randevu Al @endif
                 </h1>
-                <p class="mt-2 max-w-xl pl-3 text-sm leading-relaxed text-slate-600">
-                    @if($aileHekimiOdak)
-                        Kayıtlı <strong class="font-semibold text-slate-800">aile hekiminiz</strong> sabittir; yalnızca <strong class="font-semibold text-slate-800">gün ve saat</strong> seçerek randevu oluşturursunuz.
-                        <a href="{{ $ru([]) }}" class="font-semibold text-emerald-700 underline decoration-emerald-300 hover:text-emerald-900">Tam randevu akışına geç</a>
-                        (farklı kurum veya doktor).
-                    @else
-                        <strong class="font-semibold text-slate-800">Konumuma göre</strong> ile telefonunuzdan alınan konuma yakın kurumlar (hastane/sağlık merkezi) mesafeye göre sıralanır (yönetimde enlem/boylam kaydı gerekir). İsterseniz klasik olarak il/ilçe seçip kurum seçin; poliklinikler yalnızca kurum seçildikten sonra açılır. Favorileri <strong class="font-semibold text-slate-800">en son adımda</strong> ekleyebilirsiniz.
-                    @endif
-                </p>
+                @if($aileHekimiOdak)
+                    <p class="mt-1.5 max-w-xl pl-3 text-xs text-slate-600">
+                        Tarih ve saat seçin.
+                        <a href="{{ $ru([]) }}" class="font-semibold text-emerald-700 underline decoration-emerald-300 hover:text-emerald-900">Tam akış</a>
+                    </p>
+                @endif
             </div>
 
             <div class="flex flex-wrap items-center gap-2 sm:gap-3 rounded-2xl border border-sky-100/90 bg-sky-50/40 p-3 sm:p-2 sm:bg-transparent sm:border-0 sm:p-0" role="list" aria-label="Randevu adımları">
@@ -97,11 +86,29 @@
         </div>
     </div>
 
+    @if (($kurumTipi ?? null) === 'saglik_merkezi' && ! $aileHekimiOdak)
+        <div class="health-center-spotlight hospital-glass pl-5 pr-4 py-4 sm:pl-6 sm:pr-5 sm:py-5">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                <div class="min-w-0 pl-1">
+                    <p class="text-[11px] font-bold uppercase tracking-wider text-teal-800">Sağlık merkezi randevusu</p>
+                    <p class="mt-1 text-sm font-semibold text-slate-900 sm:text-base">Poliklinik ve tanı-tedavi birimlerinden uygun zamanı seçin</p>
+                    <p class="mt-2 max-w-2xl text-xs leading-relaxed text-slate-600 sm:text-sm">
+                        Sağlık merkezleri genelde daha küçük ölçekli kurumlardır; muayene, kontrol ve bazı poliklinik hizmetleri için randevu bu akıştan alınır.
+                        Hastane randevusu için menüden genel <span class="font-semibold text-sky-800">Randevu Al</span> bağlantısını kullanabilirsiniz.
+                    </p>
+                </div>
+                <a href="{{ $randevuAlGenelUrl }}"
+                   class="ui-focus-ring ui-soft-rise shrink-0 self-start rounded-2xl border border-sky-200/90 bg-white/90 px-4 py-2.5 text-center text-xs font-bold text-sky-900 shadow-sm hover:border-sky-300 sm:self-center">
+                    Tüm kurum türlerine dön
+                </a>
+            </div>
+        </div>
+    @endif
+
     @if ($vekaletRandevuHastalar->isNotEmpty())
-        <div class="rounded-2xl border border-sky-200/90 bg-white/90 px-4 py-4 shadow-sm hospital-glass" role="navigation" aria-label="Randevu kimin için">
+        <div class="rounded-2xl border border-sky-200/90 bg-white/90 px-3 py-3 shadow-sm hospital-glass" role="navigation" aria-label="Randevu kimin için">
             <p class="text-xs font-bold uppercase tracking-wide text-sky-800">Randevu kimin için?</p>
-            <p class="mt-1 text-xs text-slate-600">Yetkili olduğunuz kişinin adına randevu almak için üzerine tıklayın; kendi adınıza için «Kendim» seçin.</p>
-            <div class="mt-3 flex flex-wrap gap-2">
+            <div class="mt-2 flex flex-wrap gap-2">
                 <a href="{{ $kendimRandevuUrl }}"
                    class="inline-flex items-center gap-1.5 rounded-2xl border px-3 py-2 text-xs font-bold transition
                         @if(empty($proxyHastaId))
@@ -138,29 +145,28 @@
     @endif
 
     @if (! empty($proxyHastaId) && isset($randevuHedefHasta))
-        <div class="rounded-2xl border border-indigo-200/90 bg-indigo-50/60 px-4 py-3 text-sm text-indigo-950 shadow-sm">
+        <div class="rounded-2xl border border-indigo-200/90 bg-indigo-50/60 px-3 py-2 text-sm text-indigo-950 shadow-sm">
             <span class="font-semibold">{{ $randevuHedefHasta->name }}</span> adına randevu alıyorsunuz.
             <a href="{{ route('musteri.randevu.al') }}" class="ml-2 font-semibold text-indigo-800 underline decoration-indigo-300 hover:text-indigo-950">Kendi adıma randevu al</a>
         </div>
     @endif
 
-    <div class="space-y-6">
+    <div class="space-y-4">
         @unless ($aileHekimiOdak)
         <!-- Step 1: City → District → Institution -->
-        <section class="rounded-3xl border border-sky-100/80 bg-white/75 hospital-glass p-5 shadow-sm surface-elevated ui-soft-rise">
-            <div class="mb-4 flex items-center gap-3">
+        <section class="rounded-2xl border border-sky-100/80 bg-white/75 hospital-glass p-4 shadow-sm surface-elevated ui-soft-rise">
+            <div class="mb-3 flex items-center gap-2">
                 <span class="flex h-10 w-10 items-center justify-center rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 to-emerald-50 text-sm font-extrabold text-sky-900">
                     1
                 </span>
                 <h2 class="text-sm font-semibold uppercase tracking-wide text-sky-700">İl, ilçe ve kurum</h2>
             </div>
 
-            <div class="space-y-5">
-                <div class="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/80 to-sky-50/40 p-4 shadow-sm">
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="space-y-4">
+                <div class="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/80 to-sky-50/40 p-3 shadow-sm">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div class="min-w-0">
-                            <p class="text-sm font-semibold text-emerald-950">Konumuma göre yakın kurumlar</p>
-                            <p class="mt-0.5 text-xs text-slate-600">Tarayıcı konum izni ister; veriler cihazınızdan okunur ve yalnızca sıralama için kullanılır.</p>
+                            <p class="text-sm font-semibold text-emerald-950">Konumuma göre sırala</p>
                         </div>
                         <div class="flex flex-wrap items-center gap-2">
                             <button type="button" id="mhrs-near-me-btn"
@@ -235,19 +241,6 @@
                             Ara
                         </button>
                     </form>
-                    <p class="text-xs text-slate-500">
-                        @if (!empty($nearMeActive))
-                            @if ($city)
-                                <strong class="font-semibold text-slate-700">Seçili il içinde</strong> kurumlar konumunuza göre yakından uzağa sıralanır.
-                            @else
-                                <strong class="font-semibold text-slate-700">Tüm aktif kurumlar</strong> konumunuza göre yakından uzağa sıralanır; il seçerek listeyi daraltabilirsiniz.
-                            @endif
-                            Koordinatı olmayan kayıtlar listenin sonunda alfabetik gelir.
-                        @else
-                            İlçe seçmek isteğe bağlıdır; seçmezseniz ildeki tüm aktif kurumlar listelenir. Arama, seçili il (ve varsa ilçe) içinde kurum adı ve adresinde gezer.
-                        @endif
-                        <strong class="font-semibold text-slate-700"> Poliklinik listesi yalnızca bir kuruma tıkladıktan sonra</strong> görünür.
-                    </p>
                     @if (!empty($nearMeActive) && $hospitals->isNotEmpty() && count($hospitalDistanceKm ?? []) === 0)
                         <div class="rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-950">
                             Hiçbir kurumda harita konumu tanımlı değil. Yönetim panelinden kurum kayıtlarına enlem/boylam girin veya il ile aramaya devam edin.
@@ -324,17 +317,15 @@
 
         <!-- Step 2: Department -->
         @if(! $aileHekimiOdak && !empty($hospitalId))
-            <section class="rounded-3xl border border-sky-100/80 bg-white/75 hospital-glass p-5 shadow-sm surface-elevated ui-soft-rise">
-                <div class="mb-4 flex items-center gap-3">
+            <section class="rounded-2xl border border-sky-100/80 bg-white/75 hospital-glass p-4 shadow-sm surface-elevated ui-soft-rise">
+                <div class="mb-3 flex items-center gap-2">
                     <span class="flex h-10 w-10 items-center justify-center rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 to-emerald-50 text-sm font-extrabold text-sky-900">
                         2
                     </span>
                     <h2 class="text-sm font-semibold uppercase tracking-wide text-sky-700">Birim seçimi</h2>
                 </div>
 
-                <p class="mb-4 text-sm text-slate-600">Bu adım, seçtiğiniz kuruma göredir; önce konumdan kurumu tıklamış olmanız gerekir. Listede yalnızca bu kurumda aktif doktoru olan birimler gösterilir. Poliklinik adına göre arama yapabilirsiniz.</p>
-
-                <form method="get" action="{{ $ru([]) }}" class="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+                <form method="get" action="{{ $ru([]) }}" class="mb-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
                     <input type="hidden" name="hospital_id" value="{{ $hospitalId }}">
                     <div class="min-w-0 flex-1 sm:max-w-md">
                         <label for="department_q" class="mb-1 block text-sm font-medium text-slate-700">Poliklinik ara</label>
@@ -380,15 +371,13 @@
         <!-- Step 3 & 4: Doctor + Date & Time -->
         @if(! $aileHekimiOdak && !empty($departmentId))
             @if($doctors->isNotEmpty() )
-                <section class="rounded-3xl border border-sky-100/80 bg-white/75 hospital-glass p-5 shadow-sm surface-elevated ui-soft-rise">
-                    <div class="mb-4 flex items-center gap-3">
+                <section class="rounded-2xl border border-sky-100/80 bg-white/75 hospital-glass p-4 shadow-sm surface-elevated ui-soft-rise">
+                    <div class="mb-3 flex items-center gap-2">
                         <span class="flex h-10 w-10 items-center justify-center rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 to-emerald-50 text-sm font-extrabold text-sky-900">
                             3
                         </span>
                         <h2 class="text-sm font-semibold uppercase tracking-wide text-sky-700">Doktor seçimi</h2>
                     </div>
-
-                    <p class="mb-4 text-sm text-slate-600">Doktorlar, önümüzdeki {{ $bookingDaysAhead }} gün içindeki <strong class="font-semibold text-slate-800">en yakın müsait randevu gününe</strong> göre sıralanır; müsaitliği olmayanlar listenin sonunda yer alır.</p>
 
                     <form method="get" action="{{ $ru([]) }}" class="flex flex-wrap items-end gap-4">
                         <input type="hidden" name="hospital_id" value="{{ $hospitalId }}">
@@ -418,7 +407,7 @@
                     </form>
                 </section>
                 @elseif (!empty($departmentId))
-                <div class="rounded-3xl border border-amber-200 bg-amber-50/70 hospital-glass p-5">
+                <div class="rounded-2xl border border-amber-200 bg-amber-50/70 hospital-glass p-4">
                     <div class="text-sm font-semibold text-amber-900">Bu birimde doktor bulunamadı.</div>
                     <div class="mt-1 text-sm text-amber-800">Bölümü değiştirip tekrar deneyin.</div>
                 </div>
@@ -430,10 +419,10 @@
                 $gizliRandevuModu = $gizliRandevuModu ?? false;
                 $bookingExtra = $gizliRandevuModu ? ['gizli_randevu' => 1] : [];
             @endphp
-            <section class="rounded-3xl border border-sky-100/80 bg-white/75 hospital-glass p-5 shadow-sm surface-elevated ui-soft-rise">
-                <div class="mb-4 space-y-3">
+            <section class="rounded-2xl border border-sky-100/80 bg-white/75 hospital-glass p-4 shadow-sm surface-elevated ui-soft-rise">
+                <div class="mb-3 space-y-3">
                     @if($aileHekimiOdak && $aileHekimiDoctor)
-                        <div class="rounded-2xl border border-violet-200/90 bg-gradient-to-br from-violet-50/90 to-emerald-50/40 px-4 py-3 text-sm text-slate-800">
+                        <div class="rounded-2xl border border-violet-200/90 bg-gradient-to-br from-violet-50/90 to-emerald-50/40 px-3 py-2.5 text-sm text-slate-800">
                             <p class="font-bold text-violet-950">Aile hekiminiz</p>
                             <p class="mt-1 font-semibold text-slate-900">{{ $aileHekimiDoctor->user?->name ?? trim((string) $aileHekimiDoctor->title) ?: '—' }}</p>
                             @if($aileHekimiDoctor->title)
@@ -455,7 +444,7 @@
                     </div>
 
                     <div class="rounded-2xl border border-slate-200/90 bg-slate-50/40 p-1.5">
-                        <p class="mb-2 px-2 text-xs font-medium text-slate-600">Randevu türü</p>
+                        <p class="mb-1.5 px-2 text-xs font-medium text-slate-600">Randevu türü</p>
                         <div class="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                             <a href="{{ $ru(array_filter($ahMerge([
                                 'hospital_id' => $hospitalId,
@@ -479,24 +468,13 @@
                                 Gizli randevu
                             </a>
                         </div>
-                        @if($gizliRandevuModu)
-                            <p class="mt-2 px-2 text-[11px] leading-relaxed text-violet-900/90">
-                                Gizli randevu, kaydınızı panelde ayrı bir bölümde gösterir; kurum içi işleyiş aynı kalır.
-                            </p>
-                        @endif
                     </div>
 
                     @if($oncelikliHasta ?? false)
                         <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50/60 px-3 py-2 text-xs font-medium text-emerald-950">
-                            Öncelikli hasta: her çalışma bloğunun <strong class="font-semibold">ilk saati</strong> yalnızca size ayrılmıştır; ayrıca diğer müsait saatleri de seçebilirsiniz. Randevu oluşturulunca sistem tarafından <strong class="font-semibold">anında onaylanır</strong>.
-                        </div>
-                    @else
-                        <div class="rounded-2xl border border-sky-200/80 bg-sky-50/50 px-3 py-2 text-xs text-slate-700">
-                            {{ $oncelikliYasEsigi ?? 65 }} yaş üstü (doğum tarihi) veya profilde engelli işaretli hastalar öncelikli slotlara erişir. Tüm randevular oluşturulduğunda <strong class="font-semibold text-slate-900">anında onaylanır</strong>.
+                            Öncelikli hasta: blokların ilk saati size ayrılmış olabilir; diğer saatler de seçilebilir.
                         </div>
                     @endif
-
-                    <p class="text-sm text-slate-600">Önce bir gün seçin; ardından o güne ait müsait saatler listelenir.</p>
 
                     @if(!empty($availableDates) && $availableDates->count() > 0)
                         <div class="flex flex-wrap gap-2">
@@ -564,7 +542,7 @@
                         Seçilen tarihte müsait saat bulunamadı. Farklı tarih deneyin.
                     </div>
                 @else
-                    <form method="post" action="{{ route('musteri.randevu.kaydet') }}" class="mt-6 space-y-5">
+                    <form method="post" action="{{ route('musteri.randevu.kaydet') }}" class="mt-4 space-y-3">
                         @csrf
                         @if (! empty($proxyHastaId))
                             <input type="hidden" name="hasta_id" value="{{ $proxyHastaId }}">
@@ -575,15 +553,11 @@
 
                         <fieldset @if($gizliRandevuModu) class="rounded-2xl border-2 border-violet-200/90 bg-violet-50/35 p-4 shadow-sm" @endif>
                             <legend class="sr-only">Müsait saatler</legend>
-                            <div class="mb-3 text-sm font-semibold @if($gizliRandevuModu) text-violet-950 @else text-slate-900 @endif">
-                                @if($gizliRandevuModu)
-                                    Gizli randevu — {{ $selectedDate?->format('d.m.Y') ?? $selectedDateValue }} müsait saatler
-                                @else
-                                    {{ $selectedDate?->format('d.m.Y') ?? $selectedDateValue }} için müsait saatler
-                                @endif
+                            <div class="mb-2 text-sm font-semibold @if($gizliRandevuModu) text-violet-950 @else text-slate-900 @endif">
+                                {{ $selectedDate?->format('d.m.Y') ?? $selectedDateValue }} — müsait saatler
                             </div>
 
-                            <div class="flex flex-col gap-2">
+                            <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
                                 @foreach($slots as $slot)
                                     @php
                                         $oncelikliSlot = $slot->slot_tipi === \App\Enums\RandevuSlotTipi::Oncelikli;
@@ -613,14 +587,11 @@
 
                         <div>
                             <label for="sikayet" class="mb-1 block text-sm font-medium text-slate-700">Şikâyet / not (isteğe bağlı)</label>
-                            <textarea name="sikayet" id="sikayet" rows="3" maxlength="2000"
+                            <textarea name="sikayet" id="sikayet" rows="2" maxlength="2000"
                                       class="w-full rounded-2xl border border-sky-200 bg-white/70 px-3 py-2 text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/50">{{ old('sikayet') }}</textarea>
                         </div>
 
-                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            <div class="text-xs text-slate-500">
-                                Randevu oluşturulduğunda slot rezerve edilir ve kayıt <strong class="font-semibold text-slate-700">anında onaylanır</strong> (7/24).
-                            </div>
+                        <div class="flex justify-end">
                             <button type="submit" class="ui-focus-ring rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-600/20 hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-500/25 transition">
                                 Randevuyu oluştur
                             </button>
@@ -628,8 +599,8 @@
                     </form>
                 @endif
 
-                <div class="mt-6 text-center">
-                    <a href="{{ route('musteri.panel') }}" class="font-medium text-emerald-700 hover:text-emerald-900">Randevularıma dön</a>
+                <div class="mt-4 text-center">
+                    <a href="{{ route('musteri.panel') }}" class="text-sm font-medium text-emerald-700 hover:text-emerald-900">Randevularıma dön</a>
                 </div>
 
                 @if (!empty($hospitalId) && !empty($departmentId))
@@ -643,10 +614,9 @@
                             }
                         }
                     @endphp
-                    <div class="mt-8 rounded-3xl border border-amber-200/90 bg-amber-50/25 hospital-glass p-5 shadow-sm">
-                        <h3 class="text-sm font-semibold uppercase tracking-wide text-amber-900">Favoriler (isteğe bağlı — en son)</h3>
-                        <p class="mt-1 text-xs text-slate-600">İsterseniz bu hastane ve polikliniği kaydederek panele hızlı erişin; randevu almanızı etkilemez.</p>
-                        <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                    <div class="mt-5 rounded-2xl border border-amber-200/90 bg-amber-50/25 hospital-glass p-4 shadow-sm">
+                        <h3 class="text-xs font-semibold uppercase tracking-wide text-amber-900">Favoriler</h3>
+                        <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                             <form method="post" action="{{ route('musteri.favori.hastane.toggle') }}" class="inline">
                                 @csrf
                                 <input type="hidden" name="hospital_id" value="{{ $hospitalId }}">
@@ -677,7 +647,6 @@
             </section>
         @endif
     </div>
-        </div>
     </div>
 
     <script>

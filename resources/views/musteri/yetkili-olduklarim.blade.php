@@ -77,7 +77,7 @@
             </section>
         </div>
 
-        <section class="rounded-3xl border border-indigo-100/90 bg-gradient-to-br from-indigo-50/50 to-white/90 hospital-glass p-5 shadow-sm sm:p-6 lg:sticky lg:top-24">
+        <section class="panel-inpage-sticky rounded-3xl border border-indigo-100/90 bg-gradient-to-br from-indigo-50/50 to-white/90 hospital-glass p-5 shadow-sm sm:p-6">
             <h2 class="text-sm font-bold uppercase tracking-wide text-indigo-900">Kimlik bilgileri ile hasta ekle</h2>
             <p class="mt-1 text-xs leading-relaxed text-slate-600">
                 Hastanın <strong class="font-semibold text-slate-800">ad, soyad, T.C. kimlik no, seri no</strong> ve <strong class="font-semibold text-slate-800">cinsiyet</strong> bilgilerini girin. T.C. + ad/soyad + cinsiyet, sistem kaydıyla eşleşmelidir.

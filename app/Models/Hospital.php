@@ -42,4 +42,12 @@ class Hospital extends Model
     {
         return $this->hasMany(HospitalWorkingHour::class)->orderBy('weekday')->orderBy('sort_order');
     }
+
+    /** @return HasMany<User, $this> */
+    public function managedHospitalAdmins(): HasMany
+    {
+        return $this->hasMany(User::class, 'managed_hospital_id')
+            ->whereRaw('LOWER(TRIM(role)) = ?', ['hospital_admin'])
+            ->orderBy('name');
+    }
 }

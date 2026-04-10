@@ -116,7 +116,7 @@
             </form>
         </section>
 
-        <aside class="rounded-3xl border border-sky-100/80 bg-white/70 hospital-glass p-5 shadow-sm">
+        <aside class="panel-inpage-sticky rounded-3xl border border-sky-100/80 bg-white/70 hospital-glass p-5 shadow-sm">
             <div class="text-sm font-semibold text-slate-900">Hızlı işlemler</div>
             <div class="mt-3 space-y-3">
                 <a href="{{ route('musteri.randevu.al') }}" class="inline-flex w-full items-center justify-center rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 transition">

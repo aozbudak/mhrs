@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\HandlesHospitalDistrictInput;
 use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\Doctor;
@@ -9,6 +10,7 @@ use App\Models\Hospital;
 use App\Models\HospitalWorkingHour;
 use App\Models\User;
 use App\Services\DoctorRandevuSlotGenerator;
+use App\Services\HospitalWorkingHoursService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,6 +23,12 @@ use Illuminate\View\View;
 
 class AdminHospitalController extends Controller
 {
+    use HandlesHospitalDistrictInput;
+
+    public function __construct(
+        private readonly HospitalWorkingHoursService $workingHoursService
+    ) {}
+
     /** ISO hafta günü 1 = Pazartesi … 7 = Pazar */
     private const GUNLER = [
         1 => 'Pazartesi',
@@ -123,7 +131,7 @@ class AdminHospitalController extends Controller
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $normalizedIntervals = $this->normalizeIntervalsFromRequest($request);
+        $normalizedIntervals = $this->workingHoursService->normalizeIntervalsFromRequest($request);
         $doctorRows = $this->validatedDoctorRowsFromRequest($request, uniqueEmail: true);
 
         $generator = app(DoctorRandevuSlotGenerator::class);
@@ -141,7 +149,7 @@ class AdminHospitalController extends Controller
                 'is_saglik_merkezi' => false,
             ]);
 
-            $this->syncHospitalWorkingHours($h->id, $normalizedIntervals);
+            $this->workingHoursService->sync($h->id, $normalizedIntervals);
 
             foreach ($doctorRows as $row) {
                 $tc = $row['tc_kimlik_no'] ?? $this->generateUniqueTcKimlik($row['email']);
@@ -182,7 +190,7 @@ class AdminHospitalController extends Controller
 
     public function edit(Hospital $hastane): View
     {
-        $hastane->load(['workingHours', 'doctors.user', 'doctors.department']);
+        $hastane->load(['workingHours', 'doctors.user', 'doctors.department', 'managedHospitalAdmins']);
 
         $departments = Department::query()
             ->where('is_active', true)
@@ -225,7 +233,7 @@ class AdminHospitalController extends Controller
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $normalizedIntervals = $this->normalizeIntervalsFromRequest($request);
+        $normalizedIntervals = $this->workingHoursService->normalizeIntervalsFromRequest($request);
         $generator = app(DoctorRandevuSlotGenerator::class);
 
         DB::transaction(function () use ($validated, $districts, $request, $hastane, $normalizedIntervals) {
@@ -241,7 +249,7 @@ class AdminHospitalController extends Controller
                 'is_saglik_merkezi' => false,
             ]);
 
-            $this->syncHospitalWorkingHours($hastane->id, $normalizedIntervals);
+            $this->workingHoursService->sync($hastane->id, $normalizedIntervals);
         });
 
         $generator->resyncFutureSlotsForHospital((int) $hastane->id);
@@ -303,6 +311,104 @@ class AdminHospitalController extends Controller
             ->with('success', 'Doktor hesabı bu hastaneye eklendi.');
     }
 
+    public function storeHospitalAdmin(Request $request, Hospital $hastane): RedirectResponse
+    {
+        $request->merge([
+            'kurum_admin_email' => strtolower(trim((string) $request->input('kurum_admin_email', ''))),
+        ]);
+
+        $validated = $request->validate([
+            'kurum_admin_name' => ['required', 'string', 'max:255'],
+            'kurum_admin_email' => ['required', 'string', 'email', 'max:255', 'unique:'.User::class.',email'],
+            'kurum_admin_password' => ['required', 'confirmed', Password::defaults()],
+        ], [], [
+            'kurum_admin_name' => 'ad soyad',
+            'kurum_admin_email' => 'e-posta',
+            'kurum_admin_password' => 'şifre',
+        ]);
+
+        User::query()->create([
+            'name' => $validated['kurum_admin_name'],
+            'email' => $validated['kurum_admin_email'],
+            'tc_kimlik_no' => $this->generateUniqueTcKimlik($validated['kurum_admin_email']),
+            'phone' => null,
+            'birth_date' => null,
+            'gender' => null,
+            'role' => 'hospital_admin',
+            'password' => $validated['kurum_admin_password'],
+            'managed_hospital_id' => $hastane->id,
+        ]);
+
+        $hastane->refresh();
+
+        $editRoute = $hastane->is_saglik_merkezi
+            ? 'admin.saglik-merkezleri.edit'
+            : 'admin.hastaneler.edit';
+
+        return redirect()
+            ->route($editRoute, $hastane)
+            ->with('success', 'Kurum paneli kullanıcısı oluşturuldu. Giriş sayfasında «Kurum» sekmesini seçmelidir.');
+    }
+
+    public function updateHospitalAdmin(Request $request, Hospital $hastane, User $kurumYoneticisi): RedirectResponse
+    {
+        $this->assertHospitalAdminForHospital($kurumYoneticisi, $hastane);
+
+        $aid = (int) $kurumYoneticisi->id;
+        $prefix = "kurum_admins.$aid";
+
+        $kurumAdmins = $request->input('kurum_admins', []);
+        $kurumAdmins = is_array($kurumAdmins) ? $kurumAdmins : [];
+        $sub = $kurumAdmins[$aid] ?? [];
+        $sub = is_array($sub) ? $sub : [];
+        $kurumAdmins[$aid] = array_merge($sub, [
+            'email' => strtolower(trim((string) ($sub['email'] ?? ''))),
+        ]);
+        $request->merge(['kurum_admins' => $kurumAdmins]);
+
+        $validated = $request->validate([
+            "$prefix.name" => ['required', 'string', 'max:255'],
+            "$prefix.email" => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($kurumYoneticisi->id)],
+            "$prefix.phone" => ['nullable', 'string', 'max:20'],
+            "$prefix.password" => ['nullable', 'confirmed', Password::defaults()],
+        ], [], [
+            "$prefix.name" => 'ad soyad',
+            "$prefix.email" => 'e-posta',
+            "$prefix.phone" => 'telefon',
+            "$prefix.password" => 'şifre',
+        ]);
+
+        $row = $validated['kurum_admins'][$aid];
+
+        $kurumYoneticisi->fill([
+            'name' => $row['name'],
+            'email' => $row['email'],
+            'phone' => $row['phone'] ?? null,
+        ]);
+
+        if (! empty($row['password'])) {
+            $kurumYoneticisi->password = $row['password'];
+        }
+
+        $kurumYoneticisi->save();
+
+        $hastane->refresh();
+        $editRoute = $hastane->is_saglik_merkezi
+            ? 'admin.saglik-merkezleri.edit'
+            : 'admin.hastaneler.edit';
+
+        return redirect()
+            ->route($editRoute, $hastane)
+            ->with('success', 'Kurum yöneticisi bilgileri güncellendi.');
+    }
+
+    private function assertHospitalAdminForHospital(User $user, Hospital $hastane): void
+    {
+        if (! $user->isHospitalAdmin() || (int) $user->managed_hospital_id !== (int) $hastane->id) {
+            abort(404);
+        }
+    }
+
     public function destroy(Hospital $hastane): RedirectResponse
     {
         $hastane->delete();
@@ -338,74 +444,6 @@ class AdminHospitalController extends Controller
         }
 
         return $rows;
-    }
-
-    /**
-     * @return list<array{weekday:int, start_time:string, end_time:string}>
-     */
-    private function normalizeIntervalsFromRequest(Request $request): array
-    {
-        $rawIntervals = $request->input('intervals');
-        if (! is_array($rawIntervals)) {
-            $rawIntervals = [];
-        }
-        $request->merge(['intervals' => array_values($rawIntervals)]);
-
-        $validated = $request->validate([
-            'intervals' => ['array', 'max:40'],
-            'intervals.*.weekday' => ['required', 'integer', 'between:1,7'],
-            'intervals.*.start_time' => ['required', 'string', 'max:16'],
-            'intervals.*.end_time' => ['required', 'string', 'max:16'],
-        ], [], [
-            'intervals' => 'çalışma aralığı',
-            'intervals.*.weekday' => 'gün',
-            'intervals.*.start_time' => 'başlangıç',
-            'intervals.*.end_time' => 'bitiş',
-        ]);
-
-        $normalized = [];
-        foreach ($validated['intervals'] as $idx => $row) {
-            try {
-                $start = Carbon::parse($row['start_time'])->format('H:i:s');
-                $end = Carbon::parse($row['end_time'])->format('H:i:s');
-            } catch (\Throwable) {
-                throw ValidationException::withMessages([
-                    "intervals.$idx.start_time" => 'Geçerli bir saat girin.',
-                ]);
-            }
-
-            if ($end <= $start) {
-                throw ValidationException::withMessages([
-                    "intervals.$idx.end_time" => 'Bitiş saati başlangıçtan sonra olmalıdır.',
-                ]);
-            }
-
-            $normalized[] = [
-                'weekday' => (int) $row['weekday'],
-                'start_time' => $start,
-                'end_time' => $end,
-            ];
-        }
-
-        return $normalized;
-    }
-
-    /**
-     * @param  list<array{weekday:int, start_time:string, end_time:string}>  $normalized
-     */
-    private function syncHospitalWorkingHours(int $hospitalId, array $normalized): void
-    {
-        HospitalWorkingHour::query()->where('hospital_id', $hospitalId)->delete();
-
-        foreach ($normalized as $sort => $row) {
-            HospitalWorkingHour::query()->create([
-                'hospital_id' => $hospitalId,
-                'weekday' => $row['weekday'],
-                'start_time' => $row['start_time'],
-                'end_time' => $row['end_time'],
-                'sort_order' => $sort,
-            ]);
-        }
     }
 
     /**
@@ -544,50 +582,6 @@ class AdminHospitalController extends Controller
         }
 
         return $department;
-    }
-
-    /**
-     * @return array<int, string>|null
-     */
-    private function parseDistrictsInput(Request $request): ?array
-    {
-        $raw = $request->input('districts_input');
-        if ($raw === null || trim((string) $raw) === '') {
-            return null;
-        }
-
-        $parts = preg_split('/[\r\n,]+/', (string) $raw, -1, PREG_SPLIT_NO_EMPTY);
-        $clean = collect($parts)
-            ->map(fn ($s) => trim((string) $s))
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
-
-        return $clean === [] ? null : $clean;
-    }
-
-    /**
-     * @return array<int, string>|null
-     */
-    private function validatedDistrictsFromInput(Request $request): ?array
-    {
-        $parsed = $this->parseDistrictsInput($request);
-        if ($parsed === null) {
-            return null;
-        }
-
-        Validator::make(
-            ['districts' => $parsed],
-            [
-                'districts' => ['array', 'max:50'],
-                'districts.*' => ['string', 'max:100'],
-            ],
-            [],
-            ['districts' => 'ilçe']
-        )->validate();
-
-        return $parsed;
     }
 
     private function generateUniqueTcKimlik(string $email): string

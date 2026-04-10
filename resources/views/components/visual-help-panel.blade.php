@@ -14,8 +14,9 @@
 @endphp
 
 <div {{ $attributes->class([
-    'rounded-3xl border border-sky-200/80 bg-gradient-to-b from-white/90 via-white/75 to-sky-50/40 hospital-glass shadow-md shadow-sky-200/20 overflow-hidden',
-    'lg:sticky lg:top-24' => $sticky,
+    'rounded-3xl border border-sky-200/80 bg-gradient-to-b from-white/90 via-white/75 to-sky-50/40 hospital-glass shadow-md shadow-sky-200/20',
+    'overflow-hidden' => ! $sticky,
+    'panel-inpage-sticky' => $sticky,
 ]) }}>
     <div class="relative border-b border-sky-100/80 bg-gradient-to-r from-sky-500/10 via-emerald-500/8 to-transparent px-5 py-4">
         <div class="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-emerald-400/20 blur-2xl"></div>

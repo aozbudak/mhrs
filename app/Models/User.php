@@ -40,6 +40,7 @@ class User extends Authenticatable
         'patient_city',
         'patient_district',
         'aile_hekimi_doctor_id',
+        'managed_hospital_id',
         'last_login_at',
         'last_logout_at',
     ];
@@ -196,6 +197,11 @@ class User extends Authenticatable
         return $this->belongsTo(Doctor::class, 'aile_hekimi_doctor_id');
     }
 
+    public function managedHospital(): BelongsTo
+    {
+        return $this->belongsTo(Hospital::class, 'managed_hospital_id');
+    }
+
     public function randevular(): HasMany
     {
         return $this->hasMany(Randevu::class)->orderByDesc('created_at');
@@ -297,5 +303,10 @@ class User extends Authenticatable
     public function isDoctor(): bool
     {
         return $this->normalizedRole() === 'doctor';
+    }
+
+    public function isHospitalAdmin(): bool
+    {
+        return $this->normalizedRole() === 'hospital_admin';
     }
 }

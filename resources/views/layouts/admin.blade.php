@@ -31,7 +31,7 @@
 
     <div class="flex min-h-screen">
         <aside id="admin-sidebar"
-               class="fixed inset-y-0 left-0 z-40 flex w-64 max-w-[min(100vw-3rem,16rem)] flex-col border-r border-sky-200/60 bg-white/90 hospital-glass shadow-xl transition-transform duration-200 ease-out -translate-x-full lg:static lg:translate-x-0 lg:max-w-none lg:shadow-none admin-soft-shadow">
+               class="fixed inset-y-0 left-0 z-40 flex h-screen min-h-0 w-64 max-w-[min(100vw-3rem,16rem)] flex-col overflow-hidden border-r border-sky-200/60 bg-white/90 hospital-glass shadow-xl transition-transform duration-200 ease-out -translate-x-full lg:translate-x-0 lg:max-w-none admin-soft-shadow">
             <div class="flex h-16 shrink-0 items-center gap-3 border-b border-sky-100/80 px-4">
                 <div class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-50 to-emerald-50 border border-sky-200">
                     <svg width="20" height="20" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -48,7 +48,7 @@
                 </button>
             </div>
 
-            <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label="Admin menü">
+            <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-3 py-4" aria-label="Admin menü">
                 <a href="{{ route('admin.panel') }}"
                    class="admin-nav-item admin-lift flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition {{ request()->routeIs('admin.panel') ? 'bg-gradient-to-r from-sky-100 to-emerald-50/80 text-sky-950 shadow-sm' : 'text-slate-600 hover:bg-white/70' }}">
                     <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl {{ request()->routeIs('admin.panel') ? 'bg-white text-sky-700' : 'bg-sky-50/80 text-sky-600' }}">
@@ -91,15 +91,16 @@
                     </span>
                     Sağlık Merkezleri
                 </a>
+            </nav>
 
-                <div class="my-4 border-t border-sky-100/80"></div>
+            <div class="shrink-0 border-t border-sky-100/80 px-3 py-3">
                 <a href="{{ url('/') }}" class="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-slate-500 hover:bg-white/70 hover:text-slate-800 transition">
                     <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100/80 text-slate-500">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                     </span>
                     Siteye dön
                 </a>
-            </nav>
+            </div>
 
             <div class="shrink-0 border-t border-sky-100/80 p-3">
                 <div class="rounded-2xl border border-sky-100 bg-white/60 px-3 py-2.5">
@@ -129,6 +130,8 @@
                 </div>
             </div>
         </aside>
+
+        <div class="hidden w-64 shrink-0 lg:block" aria-hidden="true"></div>
 
         <div class="flex min-h-screen min-w-0 flex-1 flex-col">
             <header class="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b border-sky-100/80 bg-white/80 hospital-glass px-4 shadow-sm backdrop-blur-sm lg:px-6 admin-soft-shadow">

@@ -15,7 +15,7 @@
                 {{ config('app.name', 'MHRS sistemi') }}
             </a>
             <h1 class="mt-6 text-2xl font-extrabold tracking-tight text-sky-950">Giriş</h1>
-            <p class="mt-2 text-sm text-slate-600">Rolünüzü seçin; hasta T.C. kimlik no, yönetici e-posta ile giriş yapar.</p>
+            <p class="mt-2 text-sm text-slate-600">Hasta T.C. kimlik no; yönetici ve kurum (hastane / sağlık merkezi) hesapları e-posta ile giriş yapar. Kurum girişinde yönlendirme, atanmış kurum türünüze göre otomatik yapılır.</p>
         </div>
 
         <div class="rounded-3xl border border-sky-100/80 bg-white/80 hospital-glass p-6 shadow-lg shadow-sky-900/[0.06] sm:p-8">
@@ -24,23 +24,28 @@
 
                 @php
                     $loginAsQuery = request()->query('login_as');
-                    $loginAsDefault = in_array($loginAsQuery, ['patient', 'admin'], true) ? $loginAsQuery : 'patient';
+                    $loginAsDefault = in_array($loginAsQuery, ['patient', 'admin', 'hospital_admin'], true) ? $loginAsQuery : 'patient';
                     $loginAsOld = old('login_as', $loginAsDefault);
+                    $emailLoginActive = in_array($loginAsOld, ['admin', 'hospital_admin'], true);
                 @endphp
 
                 <div class="flex rounded-2xl border border-sky-200 bg-sky-50/50 p-1" role="tablist" aria-label="Giriş türü">
                     <label class="min-w-0 flex-1 cursor-pointer">
                         <input type="radio" name="login_as" value="patient" class="peer sr-only" @checked($loginAsOld === 'patient')>
-                        <span class="block rounded-xl px-2 py-2.5 text-center text-xs font-semibold text-slate-600 transition peer-checked:bg-white peer-checked:text-sky-950 peer-checked:shadow-sm sm:text-sm">Hasta</span>
+                        <span class="block rounded-xl px-1.5 py-2.5 text-center text-[11px] font-semibold text-slate-600 transition peer-checked:bg-white peer-checked:text-sky-950 peer-checked:shadow-sm sm:px-2 sm:text-sm">Hasta</span>
                     </label>
                     <label class="min-w-0 flex-1 cursor-pointer">
                         <input type="radio" name="login_as" value="admin" class="peer sr-only" @checked($loginAsOld === 'admin')>
-                        <span class="block rounded-xl px-2 py-2.5 text-center text-xs font-semibold text-slate-600 transition peer-checked:bg-white peer-checked:text-sky-950 peer-checked:shadow-sm sm:text-sm">Yönetici</span>
+                        <span class="block rounded-xl px-1.5 py-2.5 text-center text-[11px] font-semibold text-slate-600 transition peer-checked:bg-white peer-checked:text-sky-950 peer-checked:shadow-sm sm:px-2 sm:text-sm">Yönetici</span>
+                    </label>
+                    <label class="min-w-0 flex-1 cursor-pointer">
+                        <input type="radio" name="login_as" value="hospital_admin" class="peer sr-only" @checked($loginAsOld === 'hospital_admin')>
+                        <span class="block rounded-xl px-1.5 py-2.5 text-center text-[11px] font-semibold text-slate-600 transition peer-checked:bg-white peer-checked:text-sky-950 peer-checked:shadow-sm sm:px-2 sm:text-sm">Kurum</span>
                     </label>
                 </div>
 
                 <div class="space-y-4">
-                    <div id="patientLoginFields" class="@if($loginAsOld === 'admin') hidden @endif">
+                    <div id="patientLoginFields" class="@if($emailLoginActive) hidden @endif">
                         <label for="tc_kimlik_no" class="mb-1 block text-sm font-medium text-slate-700">T.C. kimlik no</label>
                         <div class="relative">
                             <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sky-600">
@@ -51,7 +56,7 @@
                             </span>
                             <input
                                 type="text"
-                                name="tc_kimlik_no"
+                                @if(! $emailLoginActive) name="tc_kimlik_no" @endif
                                 id="tc_kimlik_no"
                                 value="{{ old('tc_kimlik_no') }}"
                                 inputmode="numeric"
@@ -67,7 +72,7 @@
                         @enderror
                     </div>
 
-                    <div id="emailLoginFields" class="@if($loginAsOld !== 'admin') hidden @endif">
+                    <div id="emailLoginFields" class="@if(! $emailLoginActive) hidden @endif">
                         <label for="email" class="mb-1 block text-sm font-medium text-slate-700">E-posta</label>
                         <div class="relative">
                             <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sky-600">
@@ -78,11 +83,11 @@
                             </span>
                             <input
                                 type="email"
-                                name="email"
+                                @if($emailLoginActive) name="email" @endif
                                 id="email"
                                 value="{{ old('email') }}"
                                 autocomplete="email"
-                                @if($loginAsOld === 'admin') autofocus @endif
+                                @if($emailLoginActive) autofocus @endif
                                 class="w-full rounded-xl border border-sky-200/90 bg-white pl-11 pr-4 py-2.5 text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/15"
                             >
                         </div>
@@ -139,7 +144,7 @@
                 Hasta hesabınız yok mu?
                 <a href="{{ route('register') }}" class="font-semibold text-emerald-700 hover:text-emerald-900">Kayıt olun</a>
             </p>
-            <p class="mt-2 text-center text-xs text-slate-500">Yönetici erişimi kayıt ile verilmez.</p>
+            <p class="mt-2 text-center text-xs text-slate-500">Yönetici ve kurum erişimi kayıt ile verilmez.</p>
         </div>
 
         <p class="mt-6 text-center text-xs text-slate-500">
@@ -157,17 +162,25 @@
 
             function sync() {
                 var v = document.querySelector('input[name="login_as"]:checked')?.value || 'patient';
-                var useEmail = (v === 'admin');
+                var useEmail = (v === 'admin' || v === 'hospital_admin');
                 if (!patientFields || !emailFields) return;
                 patientFields.classList.toggle('hidden', useEmail);
                 emailFields.classList.toggle('hidden', !useEmail);
                 if (tcInput) {
                     tcInput.required = !useEmail;
-                    tcInput.toggleAttribute('disabled', useEmail);
+                    if (useEmail) {
+                        tcInput.removeAttribute('name');
+                    } else {
+                        tcInput.setAttribute('name', 'tc_kimlik_no');
+                    }
                 }
                 if (emailInput) {
                     emailInput.required = useEmail;
-                    emailInput.toggleAttribute('disabled', !useEmail);
+                    if (useEmail) {
+                        emailInput.setAttribute('name', 'email');
+                    } else {
+                        emailInput.removeAttribute('name');
+                    }
                 }
             }
 

@@ -49,7 +49,7 @@
             </ul>
         </section>
 
-        <section class="rounded-3xl border border-emerald-100/80 bg-white/75 hospital-glass p-5 shadow-sm">
+        <section class="panel-inpage-sticky rounded-3xl border border-emerald-100/80 bg-white/75 hospital-glass p-5 shadow-sm">
             <h2 class="text-sm font-semibold uppercase tracking-wide text-emerald-800">Favori poliklinikler</h2>
             <ul class="mt-4 space-y-3">
                 @forelse ($favoriteClinics as $row)

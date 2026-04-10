@@ -21,6 +21,12 @@ class EnsureAdmin
             return $next($request);
         }
 
+        if ($user->isHospitalAdmin()) {
+            return redirect()
+                ->route('hastane.panel')
+                ->with('error', 'Kurum yöneticisi hesabıyla yönetim paneline girilemez.');
+        }
+
         if ($user->isPatient()) {
             return redirect()
                 ->route('musteri.panel')
@@ -32,4 +38,3 @@ class EnsureAdmin
             ->with('error', 'Hesap rolü tanınmıyor. Lütfen yönetici ile iletişime geçin.');
     }
 }
-

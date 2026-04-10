@@ -208,5 +208,45 @@
                 </div>
             </form>
         </div>
+
+        @include('admin.partials.kurum-yoneticileri-yonet', [
+            'hastane' => $hastane,
+            'kurumYoneticisiUpdateRoute' => 'admin.saglik-merkezleri.kurum-yoneticisi.update',
+        ])
+
+        <div class="rounded-3xl border border-violet-100/80 bg-white/70 hospital-glass p-5 shadow-sm space-y-4">
+            <h2 class="text-sm font-extrabold text-slate-900">Yeni kurum paneli kullan?c?s?</h2>
+            <p class="text-xs text-slate-600 leading-relaxed">
+                Bu sa?l?k merkezi için <strong class="font-semibold text-slate-800">/hastane</strong> adresinden giriº yapabilecek bir hesap oluºturur. Giriº sayfas?nda ?Kurum? sekmesini seçmelidir.
+            </p>
+            <form method="post" action="{{ route('admin.saglik-merkezleri.kurum-yoneticisi.store', $hastane) }}" class="grid gap-4 sm:grid-cols-2">
+                @csrf
+                <div class="sm:col-span-2">
+                    <label for="kurum_admin_name" class="text-xs font-bold text-slate-700">Ad soyad</label>
+                    <input type="text" name="kurum_admin_name" id="kurum_admin_name" value="{{ old('kurum_admin_name') }}" required autocomplete="name"
+                           class="mt-1 w-full rounded-2xl border border-violet-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
+                </div>
+                <div class="sm:col-span-2">
+                    <label for="kurum_admin_email" class="text-xs font-bold text-slate-700">E-posta</label>
+                    <input type="email" name="kurum_admin_email" id="kurum_admin_email" value="{{ old('kurum_admin_email') }}" required autocomplete="email"
+                           class="mt-1 w-full rounded-2xl border border-violet-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
+                </div>
+                <div>
+                    <label for="kurum_admin_password" class="text-xs font-bold text-slate-700">ªifre</label>
+                    <input type="password" name="kurum_admin_password" id="kurum_admin_password" required autocomplete="new-password"
+                           class="mt-1 w-full rounded-2xl border border-violet-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
+                </div>
+                <div>
+                    <label for="kurum_admin_password_confirmation" class="text-xs font-bold text-slate-700">ªifre (tekrar)</label>
+                    <input type="password" name="kurum_admin_password_confirmation" id="kurum_admin_password_confirmation" required autocomplete="new-password"
+                           class="mt-1 w-full rounded-2xl border border-violet-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
+                </div>
+                <div class="sm:col-span-2">
+                    <button type="submit" class="rounded-2xl border border-violet-300 bg-violet-50/90 px-5 py-2.5 text-sm font-semibold text-violet-950 hover:bg-violet-100/90 transition">
+                        Kurum paneli hesab? oluºtur
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 @endsection

@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Middleware\EnsureAdmin;
+use App\Http\Middleware\EnsureHospitalAdmin;
+use App\Http\Middleware\EnsureManagedInstitutionKind;
 use App\Http\Middleware\EnsurePatient;
 use App\Models\User;
 use Illuminate\Foundation\Application;
@@ -17,6 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'patient' => EnsurePatient::class,
             'admin' => EnsureAdmin::class,
+            'hospital' => EnsureHospitalAdmin::class,
+            'managed_kind' => EnsureManagedInstitutionKind::class,
         ]);
         $middleware->redirectUsersTo(function () {
             $patientUser = auth('patient')->user();
@@ -27,6 +31,16 @@ return Application::configure(basePath: dirname(__DIR__))
             $adminUser = auth('admin')->user();
             if ($adminUser instanceof User && $adminUser->isAdmin()) {
                 return route('admin.panel');
+            }
+
+            $hospitalUser = auth('hospital')->user();
+            if ($hospitalUser instanceof User && $hospitalUser->isHospitalAdmin()) {
+                $hospitalUser->loadMissing('managedHospital');
+                $mh = $hospitalUser->managedHospital;
+
+                return ($mh && $mh->is_saglik_merkezi)
+                    ? route('saglik-merkezi.panel')
+                    : route('hastane.panel');
             }
 
             return '/';

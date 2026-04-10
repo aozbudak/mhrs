@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\HandlesHospitalDistrictInput;
 use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\Doctor;
@@ -9,6 +10,7 @@ use App\Models\Hospital;
 use App\Models\HospitalWorkingHour;
 use App\Models\User;
 use App\Services\DoctorRandevuSlotGenerator;
+use App\Services\HospitalWorkingHoursService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,6 +23,12 @@ use Illuminate\View\View;
 
 class AdminSaglikMerkeziController extends Controller
 {
+    use HandlesHospitalDistrictInput;
+
+    public function __construct(
+        private readonly HospitalWorkingHoursService $workingHoursService
+    ) {}
+
     /** ISO hafta günü 1 = Pazartesi … 7 = Pazar */
     private const GUNLER = [
         1 => 'Pazartesi',
@@ -123,7 +131,7 @@ class AdminSaglikMerkeziController extends Controller
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $normalizedIntervals = $this->normalizeIntervalsFromRequest($request);
+        $normalizedIntervals = $this->workingHoursService->normalizeIntervalsFromRequest($request);
         $doctorRows = $this->validatedDoctorRowsFromRequest($request, uniqueEmail: true);
 
         $generator = app(DoctorRandevuSlotGenerator::class);
@@ -141,7 +149,7 @@ class AdminSaglikMerkeziController extends Controller
                 'is_saglik_merkezi' => true,
             ]);
 
-            $this->syncHospitalWorkingHours($h->id, $normalizedIntervals);
+            $this->workingHoursService->sync($h->id, $normalizedIntervals);
 
             foreach ($doctorRows as $row) {
                 $tc = $row['tc_kimlik_no'] ?? $this->generateUniqueTcKimlik($row['email']);
@@ -182,7 +190,7 @@ class AdminSaglikMerkeziController extends Controller
 
     public function edit(Hospital $hastane): View
     {
-        $hastane->load(['workingHours', 'doctors.user', 'doctors.department']);
+        $hastane->load(['workingHours', 'doctors.user', 'doctors.department', 'managedHospitalAdmins']);
 
         $departments = Department::query()
             ->where('is_active', true)
@@ -225,7 +233,7 @@ class AdminSaglikMerkeziController extends Controller
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $normalizedIntervals = $this->normalizeIntervalsFromRequest($request);
+        $normalizedIntervals = $this->workingHoursService->normalizeIntervalsFromRequest($request);
         $generator = app(DoctorRandevuSlotGenerator::class);
 
         DB::transaction(function () use ($validated, $districts, $request, $hastane, $normalizedIntervals) {
@@ -241,7 +249,7 @@ class AdminSaglikMerkeziController extends Controller
                 'is_saglik_merkezi' => true,
             ]);
 
-            $this->syncHospitalWorkingHours($hastane->id, $normalizedIntervals);
+            $this->workingHoursService->sync($hastane->id, $normalizedIntervals);
         });
 
         $generator->resyncFutureSlotsForHospital((int) $hastane->id);
@@ -339,74 +347,6 @@ class AdminSaglikMerkeziController extends Controller
         }
 
         return $rows;
-    }
-
-    /**
-     * @return list<array{weekday:int, start_time:string, end_time:string}>
-     */
-    private function normalizeIntervalsFromRequest(Request $request): array
-    {
-        $rawIntervals = $request->input('intervals');
-        if (! is_array($rawIntervals)) {
-            $rawIntervals = [];
-        }
-        $request->merge(['intervals' => array_values($rawIntervals)]);
-
-        $validated = $request->validate([
-            'intervals' => ['array', 'max:40'],
-            'intervals.*.weekday' => ['required', 'integer', 'between:1,7'],
-            'intervals.*.start_time' => ['required', 'string', 'max:16'],
-            'intervals.*.end_time' => ['required', 'string', 'max:16'],
-        ], [], [
-            'intervals' => 'çalışma aralığı',
-            'intervals.*.weekday' => 'gün',
-            'intervals.*.start_time' => 'başlangıç',
-            'intervals.*.end_time' => 'bitiş',
-        ]);
-
-        $normalized = [];
-        foreach ($validated['intervals'] as $idx => $row) {
-            try {
-                $start = Carbon::parse($row['start_time'])->format('H:i:s');
-                $end = Carbon::parse($row['end_time'])->format('H:i:s');
-            } catch (\Throwable) {
-                throw ValidationException::withMessages([
-                    "intervals.$idx.start_time" => 'Geçerli bir saat girin.',
-                ]);
-            }
-
-            if ($end <= $start) {
-                throw ValidationException::withMessages([
-                    "intervals.$idx.end_time" => 'Bitiş saati başlangıçtan sonra olmalıdır.',
-                ]);
-            }
-
-            $normalized[] = [
-                'weekday' => (int) $row['weekday'],
-                'start_time' => $start,
-                'end_time' => $end,
-            ];
-        }
-
-        return $normalized;
-    }
-
-    /**
-     * @param  list<array{weekday:int, start_time:string, end_time:string}>  $normalized
-     */
-    private function syncHospitalWorkingHours(int $hospitalId, array $normalized): void
-    {
-        HospitalWorkingHour::query()->where('hospital_id', $hospitalId)->delete();
-
-        foreach ($normalized as $sort => $row) {
-            HospitalWorkingHour::query()->create([
-                'hospital_id' => $hospitalId,
-                'weekday' => $row['weekday'],
-                'start_time' => $row['start_time'],
-                'end_time' => $row['end_time'],
-                'sort_order' => $sort,
-            ]);
-        }
     }
 
     /**
@@ -534,50 +474,6 @@ class AdminSaglikMerkeziController extends Controller
         } catch (\Throwable) {
             return '09:00';
         }
-    }
-
-    /**
-     * @return array<int, string>|null
-     */
-    private function parseDistrictsInput(Request $request): ?array
-    {
-        $raw = $request->input('districts_input');
-        if ($raw === null || trim((string) $raw) === '') {
-            return null;
-        }
-
-        $parts = preg_split('/[\r\n,]+/', (string) $raw, -1, PREG_SPLIT_NO_EMPTY);
-        $clean = collect($parts)
-            ->map(fn ($s) => trim((string) $s))
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
-
-        return $clean === [] ? null : $clean;
-    }
-
-    /**
-     * @return array<int, string>|null
-     */
-    private function validatedDistrictsFromInput(Request $request): ?array
-    {
-        $parsed = $this->parseDistrictsInput($request);
-        if ($parsed === null) {
-            return null;
-        }
-
-        Validator::make(
-            ['districts' => $parsed],
-            [
-                'districts' => ['array', 'max:50'],
-                'districts.*' => ['string', 'max:100'],
-            ],
-            [],
-            ['districts' => 'ilçe']
-        )->validate();
-
-        return $parsed;
     }
 
     private function generateUniqueTcKimlik(string $email): string

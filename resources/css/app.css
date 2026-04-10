@@ -8,16 +8,20 @@
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+    /* Klinik arayüz: gökyüzü + teal — hastane ve sağlık merkezi akışlarında ortak */
+    --color-health-mist: #f0fdfa;
+    --color-health-depth: #0f766e;
+    --radius-health-card: 1.25rem;
 }
 
 /* Hospital theme helpers (used by Blade layouts/pages) */
 .hospital-bg{
-    background-color: #f4f9fc;
+    background-color: #f3f8fb;
     background-image:
-        radial-gradient(1000px circle at 8% -15%, rgba(56, 189, 248, 0.28), transparent 42%),
-        radial-gradient(900px circle at 92% 5%, rgba(16, 185, 129, 0.22), transparent 48%),
-        radial-gradient(700px circle at 50% 100%, rgba(14, 165, 233, 0.08), transparent 55%),
-        linear-gradient(180deg, #e8f4fc 0%, #f8fafc 38%, #ffffff 100%);
+        radial-gradient(980px circle at 6% -12%, rgba(56, 189, 248, 0.26), transparent 40%),
+        radial-gradient(860px circle at 94% 8%, rgba(45, 212, 191, 0.18), transparent 46%),
+        radial-gradient(720px circle at 50% 102%, rgba(20, 184, 166, 0.07), transparent 52%),
+        linear-gradient(180deg, #e6f4f9 0%, #f8fafc 36%, #fafefe 100%);
 }
 
 /* Sabit dekor — sayfa kaydırılırken hafif derinlik */
@@ -48,7 +52,7 @@
     height: min(420px, 75vw);
     bottom: -10%;
     left: -6%;
-    background: radial-gradient(circle, rgba(16, 185, 129, 0.28) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(20, 184, 166, 0.26) 0%, transparent 70%);
 }
 
 /* İnce nokta ızgara — çok düşük kontrast */
@@ -60,6 +64,30 @@
     opacity: 0.35;
     background-image: radial-gradient(rgba(15, 23, 42, 0.06) 1px, transparent 1px);
     background-size: 22px 22px;
+}
+
+/* İçerik içi yan sütun: üst çubuk altında yapışır, uzun içerik kendi içinde kayar */
+@media (min-width: 1024px) {
+    .panel-inpage-sticky {
+        position: sticky;
+        top: 6rem;
+        align-self: start;
+        max-height: calc(100vh - 7rem);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+}
+
+@media (min-width: 1280px) {
+    /* Yönetim özeti: xl üç sütun düzeninde sağ blok */
+    .panel-inpage-sticky-xl {
+        position: sticky;
+        top: 5rem;
+        align-self: start;
+        max-height: calc(100vh - 6rem);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
 }
 
 @media (prefers-reduced-motion: no-preference){
@@ -111,4 +139,47 @@
     .ui-soft-rise:hover{
         transform: translateY(-1px);
     }
+}
+
+/* Sağlık merkezi / bilgilendirme blokları — modern, düşük gürültü */
+.health-center-spotlight{
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-health-card);
+    border: 1px solid rgba(45, 212, 191, 0.38);
+    background:
+        linear-gradient(125deg, rgba(255, 255, 255, 0.94) 0%, rgba(240, 253, 250, 0.88) 42%, rgba(224, 242, 254, 0.55) 100%);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.7) inset,
+        0 20px 48px -32px rgba(13, 148, 136, 0.28);
+}
+.health-center-spotlight::before{
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, #14b8a6 0%, #0ea5e9 100%);
+    border-radius: 4px 0 0 4px;
+}
+.health-center-spotlight > *{
+    position: relative;
+}
+
+/* Kurum paneli: sağlık merkezi oturumu için ince çerçeve uyumu */
+.shell-saglik-merkezi-accent{
+    box-shadow:
+        inset 0 0 0 1px rgba(45, 212, 191, 0.22),
+        0 18px 45px -28px rgba(13, 148, 136, 0.32);
+}
+
+/* Genel içerik kartı — cam + yumuşak derinlik */
+.health-surface-card{
+    border-radius: 1.5rem;
+    border: 1px solid rgba(186, 230, 253, 0.65);
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.88) 100%);
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.04),
+        0 22px 50px -34px rgba(14, 165, 233, 0.22);
 }

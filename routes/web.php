@@ -8,6 +8,10 @@ use App\Http\Controllers\Admin\AdminRandevuController;
 use App\Http\Controllers\Admin\AdminSaglikMerkeziController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Hospital\HospitalPanelController;
+use App\Http\Controllers\Hospital\HospitalRandevuController;
+use App\Http\Controllers\Hospital\SaglikMerkeziPanelController;
+use App\Http\Controllers\Hospital\SaglikMerkeziRandevuController;
 use App\Http\Controllers\Musteri\MusteriPanelController;
 use App\Models\Department;
 use Illuminate\Support\Facades\Route;
@@ -37,6 +41,14 @@ Route::post('/logout', [LoginController::class, 'destroy'])
 Route::post('/admin/logout', [LoginController::class, 'destroyAdmin'])
     ->middleware('auth:admin')
     ->name('admin.logout');
+
+Route::post('/hastane/logout', [LoginController::class, 'destroyHospital'])
+    ->middleware('auth:hospital')
+    ->name('hastane.logout');
+
+Route::post('/saglik-merkezi/logout', [LoginController::class, 'destroyHospital'])
+    ->middleware('auth:hospital')
+    ->name('saglik-merkezi.logout');
 
 Route::middleware(['auth:patient', 'patient'])->prefix('musteri')->name('musteri.')->group(function () {
     Route::get('/', [MusteriPanelController::class, 'index'])->name('panel');
@@ -80,13 +92,41 @@ Route::middleware(['auth:admin', 'admin'])->prefix('admin')->name('admin.')->gro
     Route::post('/hastaneler', [AdminHospitalController::class, 'store'])->name('hastaneler.store');
     Route::get('/hastaneler/{hastane}/duzenle', [AdminHospitalController::class, 'edit'])->name('hastaneler.edit');
     Route::post('/hastaneler/{hastane}/doktorlar', [AdminHospitalController::class, 'storeDoctor'])->name('hastaneler.doktorlar.store');
+    Route::post('/hastaneler/{hastane}/kurum-yoneticisi', [AdminHospitalController::class, 'storeHospitalAdmin'])->name('hastaneler.kurum-yoneticisi.store');
+    Route::put('/hastaneler/{hastane}/kurum-yoneticileri/{kurumYoneticisi}', [AdminHospitalController::class, 'updateHospitalAdmin'])->name('hastaneler.kurum-yoneticisi.update');
     Route::put('/hastaneler/{hastane}', [AdminHospitalController::class, 'update'])->name('hastaneler.update');
     Route::delete('/hastaneler/{hastane}', [AdminHospitalController::class, 'destroy'])->name('hastaneler.destroy');
     Route::get('/saglik-merkezleri', [AdminSaglikMerkeziController::class, 'index'])->name('saglik-merkezleri.index');
     Route::get('/saglik-merkezleri/yeni', [AdminSaglikMerkeziController::class, 'create'])->name('saglik-merkezleri.create');
     Route::post('/saglik-merkezleri', [AdminSaglikMerkeziController::class, 'store'])->name('saglik-merkezleri.store');
     Route::get('/saglik-merkezleri/{hastane}/duzenle', [AdminSaglikMerkeziController::class, 'edit'])->name('saglik-merkezleri.edit');
+    Route::post('/saglik-merkezleri/{hastane}/kurum-yoneticisi', [AdminHospitalController::class, 'storeHospitalAdmin'])->name('saglik-merkezleri.kurum-yoneticisi.store');
+    Route::put('/saglik-merkezleri/{hastane}/kurum-yoneticileri/{kurumYoneticisi}', [AdminHospitalController::class, 'updateHospitalAdmin'])->name('saglik-merkezleri.kurum-yoneticisi.update');
     Route::post('/saglik-merkezleri/{hastane}/doktorlar', [AdminSaglikMerkeziController::class, 'storeDoctor'])->name('saglik-merkezleri.doktorlar.store');
     Route::put('/saglik-merkezleri/{hastane}', [AdminSaglikMerkeziController::class, 'update'])->name('saglik-merkezleri.update');
     Route::delete('/saglik-merkezleri/{hastane}', [AdminSaglikMerkeziController::class, 'destroy'])->name('saglik-merkezleri.destroy');
+});
+
+Route::middleware(['auth:hospital', 'hospital', 'managed_kind:hospital'])->prefix('hastane')->name('hastane.')->group(function () {
+    Route::get('/', [HospitalPanelController::class, 'index'])->name('panel');
+    Route::get('/doktorlar', [HospitalPanelController::class, 'doktorlar'])->name('doktorlar');
+    Route::get('/profil', [HospitalPanelController::class, 'profil'])->name('profil');
+    Route::put('/profil', [HospitalPanelController::class, 'profilGuncelle'])->name('profil.guncelle');
+    Route::get('/ayarlar', [HospitalPanelController::class, 'ayarlar'])->name('ayarlar');
+    Route::put('/ayarlar', [HospitalPanelController::class, 'update'])->name('ayarlar.guncelle');
+    Route::get('/randevular', [HospitalRandevuController::class, 'index'])->name('randevular.index');
+    Route::post('/randevular/{randevu}/tamamla', [HospitalRandevuController::class, 'tamamla'])->name('randevular.tamamla');
+    Route::delete('/randevular/{randevu}', [HospitalRandevuController::class, 'destroy'])->name('randevular.destroy');
+});
+
+Route::middleware(['auth:hospital', 'hospital', 'managed_kind:saglik_merkezi'])->prefix('saglik-merkezi')->name('saglik-merkezi.')->group(function () {
+    Route::get('/', [SaglikMerkeziPanelController::class, 'index'])->name('panel');
+    Route::get('/doktorlar', [SaglikMerkeziPanelController::class, 'doktorlar'])->name('doktorlar');
+    Route::get('/profil', [SaglikMerkeziPanelController::class, 'profil'])->name('profil');
+    Route::put('/profil', [SaglikMerkeziPanelController::class, 'profilGuncelle'])->name('profil.guncelle');
+    Route::get('/ayarlar', [SaglikMerkeziPanelController::class, 'ayarlar'])->name('ayarlar');
+    Route::put('/ayarlar', [SaglikMerkeziPanelController::class, 'update'])->name('ayarlar.guncelle');
+    Route::get('/randevular', [SaglikMerkeziRandevuController::class, 'index'])->name('randevular.index');
+    Route::post('/randevular/{randevu}/tamamla', [SaglikMerkeziRandevuController::class, 'tamamla'])->name('randevular.tamamla');
+    Route::delete('/randevular/{randevu}', [SaglikMerkeziRandevuController::class, 'destroy'])->name('randevular.destroy');
 });

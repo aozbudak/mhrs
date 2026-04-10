@@ -109,7 +109,7 @@
             </div>
         </div>
 
-        <div class="space-y-4">
+        <div class="panel-inpage-sticky-xl space-y-4">
             <section class="rounded-3xl border border-sky-100/80 bg-white/75 p-5 hospital-glass shadow-sm">
                 <div class="text-sm font-bold text-slate-900">Hızlı işlemler</div>
                 <div class="mt-3 space-y-2">
