@@ -3,14 +3,16 @@
 namespace App\Http\Controllers\Hospital;
 
 use App\Enums\RandevuDurumu;
+use App\Http\Controllers\Concerns\BuildsPoliklinikSaatFormBlocks;
 use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\Doctor;
 use App\Models\Hospital;
-use App\Models\HospitalWorkingHour;
 use App\Models\Randevu;
 use App\Models\User;
 use App\Services\DoctorRandevuSlotGenerator;
+use App\Services\HospitalDepartmentSettingService;
+use App\Services\HospitalDepartmentWorkingHoursService;
 use App\Services\HospitalWorkingHoursService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -23,6 +25,8 @@ use Illuminate\View\View;
 
 class HospitalPanelController extends Controller
 {
+    use BuildsPoliklinikSaatFormBlocks;
+
     protected function institutionRouteGroup(): string
     {
         return 'hastane';
@@ -55,7 +59,9 @@ class HospitalPanelController extends Controller
     ];
 
     public function __construct(
-        private readonly HospitalWorkingHoursService $workingHoursService
+        private readonly HospitalWorkingHoursService $workingHoursService,
+        private readonly HospitalDepartmentWorkingHoursService $departmentWorkingHoursService,
+        private readonly HospitalDepartmentSettingService $departmentSettingService,
     ) {}
 
     public function index(Request $request): View
@@ -106,48 +112,127 @@ class HospitalPanelController extends Controller
     public function ayarlar(Request $request): View
     {
         $hastane = $this->authorizedHospital();
-        $hastane->load(['workingHours', 'doctors.user', 'doctors.department']);
-
-        $intervals = old('intervals', null);
-        if ($intervals === null) {
-            $intervals = $hastane->workingHours->map(function (HospitalWorkingHour $wh) {
-                return [
-                    'weekday' => (int) $wh->weekday,
-                    'start_time' => $this->formatTimeInput($wh->start_time),
-                    'end_time' => $this->formatTimeInput($wh->end_time),
-                ];
-            })->values()->all();
-        } else {
-            $intervals = array_values(is_array($intervals) ? $intervals : []);
-        }
+        $hastane->load(['departmentWorkingHours', 'departmentSettings', 'doctors.user', 'doctors.department', 'managedDepartmentHeads.managedDepartment']);
 
         $seciliPoliklinikId = $this->seciliPoliklinikId($request, $hastane);
         $poliklinikler = $this->polikliniklerForHospital($hastane);
         $doktorlarFiltreli = $this->doktorlarOrdered($hastane, $seciliPoliklinikId);
         $doktorToplam = Doctor::query()->where('hospital_id', $hastane->id)->count();
 
+        $requiredDeptIdsMuayene = $this->departmentIdsWithDoctorsAtHospital($hastane);
+        $poliklinikSaatleri = $this->buildPoliklinikSaatFormBlocks(
+            $hastane,
+            $requiredDeptIdsMuayene,
+            $requiredDeptIdsMuayene,
+        );
+
         return $this->institutionView('hospital.ayarlar', [
             'hastane' => $hastane,
-            'intervals' => $intervals,
-            'gunler' => self::GUNLER,
+            'poliklinikSaatleri' => $poliklinikSaatleri,
+            'requiredDeptIdsMuayene' => $requiredDeptIdsMuayene,
             'doktorlarFiltreli' => $doktorlarFiltreli,
             'poliklinikler' => $poliklinikler,
             'seciliPoliklinikId' => $seciliPoliklinikId,
             'doktorToplam' => $doktorToplam,
             'routeName' => $this->institutionRouteName('ayarlar'),
             'poliklinikFiltreTemizRoute' => $this->institutionRouteName('ayarlar'),
+            'hastaneBolumleri' => $hastane->doctors
+                ->pluck('department')
+                ->filter()
+                ->unique('id')
+                ->sortBy('name')
+                ->values(),
         ]);
+    }
+
+    public function storeDepartmentHead(Request $request): RedirectResponse
+    {
+        $hastane = $this->authorizedHospital();
+        $request->merge([
+            'bolum_baskani_email' => strtolower(trim((string) $request->input('bolum_baskani_email', ''))),
+        ]);
+
+        $validated = $request->validate([
+            'bolum_baskani_name' => ['required', 'string', 'max:255'],
+            'bolum_baskani_email' => ['required', 'string', 'email', 'max:255', 'unique:'.User::class.',email'],
+            'bolum_baskani_password' => ['required', 'confirmed', Password::defaults()],
+            'bolum_baskani_department_id' => ['required', 'integer', 'exists:departments,id'],
+        ]);
+
+        $departmentId = (int) $validated['bolum_baskani_department_id'];
+        $departmentExistsInHospital = Doctor::query()
+            ->where('hospital_id', $hastane->id)
+            ->where('department_id', $departmentId)
+            ->exists();
+        if (! $departmentExistsInHospital) {
+            return redirect()->route('hastane.ayarlar')->with('error', 'Bölüm başkanı sadece kurumdaki aktif bölümlerden birine atanabilir.');
+        }
+
+        $alreadyAssigned = User::query()
+            ->where('managed_hospital_id', $hastane->id)
+            ->where('managed_department_id', $departmentId)
+            ->whereRaw('LOWER(TRIM(role)) = ?', ['department_head'])
+            ->exists();
+        if ($alreadyAssigned) {
+            return redirect()->route('hastane.ayarlar')->with('error', 'Bu bölüm için zaten bir bölüm başkanı tanımlı.');
+        }
+
+        User::query()->create([
+            'name' => $validated['bolum_baskani_name'],
+            'email' => $validated['bolum_baskani_email'],
+            'tc_kimlik_no' => $this->generateUniqueTcKimlik($validated['bolum_baskani_email']),
+            'phone' => null,
+            'birth_date' => null,
+            'gender' => null,
+            'role' => 'department_head',
+            'password' => $validated['bolum_baskani_password'],
+            'managed_hospital_id' => $hastane->id,
+            'managed_department_id' => $departmentId,
+        ]);
+
+        return redirect()
+            ->route('hastane.ayarlar')
+            ->with('success', 'Bölüm başkanı hesabı eklendi.');
+    }
+
+    public function destroyDepartmentHead(User $bolumBaskani): RedirectResponse
+    {
+        $hastane = $this->authorizedHospital();
+        if (
+            ! $bolumBaskani->isDepartmentHead()
+            || (int) $bolumBaskani->managed_hospital_id !== (int) $hastane->id
+        ) {
+            abort(404);
+        }
+
+        $bolumBaskani->delete();
+
+        return redirect()
+            ->route('hastane.ayarlar')
+            ->with('success', 'Bölüm başkanı kaldırıldı.');
     }
 
     public function update(Request $request): RedirectResponse
     {
         $hastane = $this->authorizedHospital();
 
-        $normalizedIntervals = $this->workingHoursService->normalizeIntervalsFromRequest($request);
+        $requiredDeptIds = $this->departmentIdsWithDoctorsAtHospital($hastane);
+        $byDept = $this->departmentWorkingHoursService->normalizeDeptMuayeneSimpleFromRequest(
+            $request,
+            $requiredDeptIds,
+            $requiredDeptIds
+        );
         $generator = app(DoctorRandevuSlotGenerator::class);
 
-        DB::transaction(function () use ($hastane, $normalizedIntervals) {
-            $this->workingHoursService->sync($hastane->id, $normalizedIntervals);
+        DB::transaction(function () use ($hastane, $byDept, $request) {
+            $this->workingHoursService->sync($hastane->id, $this->workingHoursService->buildWeekdayOneToFiveWithLunchBreak());
+            $this->departmentWorkingHoursService->syncForHospital($hastane->id, $byDept);
+            $this->departmentSettingService->syncFromMuayeneRequest(
+                $hastane->id,
+                $request,
+                $byDept,
+                (int) ($hastane->randevu_slot_dakika ?? 30)
+            );
         });
 
         $generator->resyncFutureSlotsForHospital((int) $hastane->id);
@@ -162,7 +247,7 @@ class HospitalPanelController extends Controller
 
         return redirect()
             ->route($this->institutionRouteName('ayarlar'), $redirectQuery)
-            ->with('success', 'Çalışma saatleri güncellendi; gelecekteki boş randevu slotları yenilendi.');
+            ->with('success', 'Birim muayene saatleri ve randevu dilimi güncellendi; gelecekteki boş slotlar yenilendi.');
     }
 
     public function profil(): View
@@ -292,5 +377,24 @@ class HospitalPanelController extends Controller
         } catch (\Throwable) {
             return '09:00';
         }
+    }
+
+    private function generateUniqueTcKimlik(string $email): string
+    {
+        $email = strtolower(trim($email));
+        $base = abs(crc32($email.'dept-a'));
+        $checksum = abs(crc32($email.'dept-b'));
+
+        for ($i = 0; $i < 5000; $i++) {
+            $body10 = str_pad((string) ((($base + $i) % 10000000000)), 10, '0', STR_PAD_LEFT);
+            $last = (string) ((($checksum + $i) % 9) + 1);
+            $candidate = $body10.$last;
+
+            if (! User::query()->where('tc_kimlik_no', $candidate)->exists()) {
+                return $candidate;
+            }
+        }
+
+        throw new \RuntimeException('Benzersiz T.C. kimlik numarası üretilemedi.');
     }
 }

@@ -17,7 +17,11 @@ class EnsureHospitalAdmin
             return redirect()->route('login');
         }
 
-        if ($user->isHospitalAdmin() && ((int) $user->managed_hospital_id) > 0) {
+        $hasManagedHospital = ((int) $user->managed_hospital_id) > 0;
+        $isKurumAdmin = $user->isHospitalAdmin() && $hasManagedHospital;
+        $isDepartmentHead = $user->isDepartmentHead() && $hasManagedHospital && ((int) $user->managed_department_id) > 0;
+
+        if ($isKurumAdmin || $isDepartmentHead) {
             return $next($request);
         }
 

@@ -65,7 +65,10 @@ class LoginController extends Controller
             $managed = $user?->managedHospital;
             $hasKurum = $user && ((int) $user->managed_hospital_id) > 0 && $managed instanceof Hospital;
 
-            if (! $user || ! $user->isHospitalAdmin() || ! $hasKurum || ! Hash::check($password, $user->getAuthPassword())) {
+            $isKurumKullanici = $user && ($user->isHospitalAdmin() || $user->isDepartmentHead());
+            $hasDepartment = $user && (! $user->isDepartmentHead() || ((int) $user->managed_department_id) > 0);
+
+            if (! $user || ! $isKurumKullanici || ! $hasKurum || ! $hasDepartment || ! Hash::check($password, $user->getAuthPassword())) {
                 throw ValidationException::withMessages([
                     'email' => __('Kurum paneli giriş bilgileri eşleşmiyor veya hesaba kurum atanmamış.'),
                 ]);
@@ -107,8 +110,12 @@ class LoginController extends Controller
             return redirect()->intended(route('admin.panel'));
         }
 
-        if ($user->isHospitalAdmin()) {
+        if ($user->isHospitalAdmin() || $user->isDepartmentHead()) {
             Auth::guard('hospital')->login($user, $request->boolean('remember'));
+
+            if ($user->isDepartmentHead()) {
+                return redirect()->intended(route('bolum-baskanligi.panel'));
+            }
 
             $user->loadMissing('managedHospital');
             $mh = $user->managedHospital;

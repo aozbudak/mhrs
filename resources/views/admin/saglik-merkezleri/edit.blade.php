@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'SaÄŸlÄ±k merkezi dÃ¼zenle')
+@section('title', 'Sa?l?k merkezi düzenle')
 @section('subtitle', $hastane->name)
 
 @section('content')
@@ -14,20 +14,20 @@
             </div>
 
             <div>
-                <label for="name" class="text-xs font-bold text-slate-700">Kurum adÄ±</label>
+                <label for="name" class="text-xs font-bold text-slate-700">Kurum ad?</label>
                 <input type="text" name="name" id="name" value="{{ old('name', $hastane->name) }}" required
                        class="mt-1 w-full rounded-2xl border border-sky-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
-                    <label for="city" class="text-xs font-bold text-slate-700">Åžehir</label>
+                    <label for="city" class="text-xs font-bold text-slate-700">ªehir</label>
                     <input type="text" name="city" id="city" value="{{ old('city', $hastane->city) }}"
                            class="mt-1 w-full rounded-2xl border border-sky-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
                 </div>
                 <div class="sm:col-span-2">
-                    <label for="districts_input" class="text-xs font-bold text-slate-700">Ä°lÃ§eler</label>
-                    <textarea name="districts_input" id="districts_input" rows="3" placeholder="Her satÄ±ra bir ilÃ§e"
+                    <label for="districts_input" class="text-xs font-bold text-slate-700">?lçeler</label>
+                    <textarea name="districts_input" id="districts_input" rows="3" placeholder="Her sat?ra bir ilçe"
                               class="mt-1 w-full rounded-2xl border border-sky-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm">{{ old('districts_input', implode("\n", $hastane->districts ?? [])) }}</textarea>
                 </div>
             </div>
@@ -57,34 +57,25 @@
                 </div>
             </div>
 
+            @include('admin.partials.kurum-konum-picker', ['suffix' => 'saglikMerkeziEdit'])
+
             <div class="flex items-center gap-2">
                 <input type="hidden" name="is_active" value="0" />
                 <input type="checkbox" name="is_active" id="is_active" value="1" class="h-4 w-4 rounded border-sky-300" @checked(old('is_active', $hastane->is_active)) />
                 <label for="is_active" class="text-sm font-medium text-slate-800">Aktif</label>
             </div>
 
-            <div class="border-t border-sky-100 pt-6">
-                <h2 class="text-sm font-extrabold text-slate-900">Kurum Ã§alÄ±ÅŸma saatleri</h2>
-                <p class="mt-1 text-xs text-slate-600 leading-relaxed">
-                    DeÄŸiÅŸiklik kaydedildiÄŸinde bu kurumdaki tÃ¼m doktorlar iÃ§in baÄŸlÄ± randevusu olmayan gelecekteki boÅŸ slotlar silinir ve yeni programa gÃ¶re yeniden Ã¼retilir.
-                </p>
-                <div class="mt-4">
-                    @include('admin.partials.working-hours-intervals', [
-                        'intervals' => $intervals,
-                        'gunler' => $gunler,
-                        'bodyId' => 'hospitalEditWhBody',
-                        'tplId' => 'hospitalEditWhTpl',
-                        'addBtnId' => 'hospitalEditWhAdd',
-                    ])
-                </div>
-            </div>
+            @include('admin.partials.poliklinik-muayene-saatleri', [
+                'poliklinikSaatleri' => $poliklinikSaatleri ?? [],
+                'requiredDeptIdsMuayene' => $requiredDeptIdsMuayene ?? [],
+            ])
 
             <div class="flex flex-wrap gap-2 border-t border-sky-100 pt-4">
                 <button type="submit" class="rounded-2xl border border-emerald-200 bg-emerald-50/90 px-5 py-2.5 text-sm font-semibold text-emerald-900 hover:bg-emerald-100/90 transition">
-                    SaÄŸlÄ±k merkezini kaydet
+                    Sa?l?k merkezini kaydet
                 </button>
                 <a href="{{ route('admin.saglik-merkezleri.index') }}" class="rounded-2xl border border-sky-200 bg-white/70 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-sky-50/60 transition">
-                    Listeye dÃ¶n
+                    Listeye dön
                 </a>
             </div>
         </form>
@@ -98,13 +89,13 @@
                             <th class="px-3 py-2 text-left">Doktor</th>
                             <th class="px-3 py-2 text-left">Sa?l?k merkezi</th>
                             <th class="px-3 py-2 text-left">Fiziksel poliklinik / oda</th>
-                            <th class="px-3 py-2 text-right">Ä°ÅŸlem</th>
+                            <th class="px-3 py-2 text-right">?ºlem</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-sky-100">
                         @forelse ($hastane->doctors as $d)
                             <tr class="hover:bg-sky-50/40">
-                                <td class="px-3 py-2.5 font-medium text-slate-900">{{ $d->user?->name ?? $d->title ?? 'KayÄ±t #'.$d->id }}</td>
+                                <td class="px-3 py-2.5 font-medium text-slate-900">{{ $d->user?->name ?? $d->title ?? 'Kay?t #'.$d->id }}</td>
                                 <td class="px-3 py-2.5 text-xs text-slate-600">{{ $hastane->name }}</td>
                                 <td class="px-3 py-2.5 text-xs text-slate-600">
                                     {{ $d->physical_clinic_name ?? '?' }}
@@ -114,15 +105,15 @@
                                 </td>
                                 <td class="px-3 py-2.5 text-right">
                                     @if ($d->user)
-                                        <a href="{{ route('admin.doktorlar.edit', $d) }}" class="rounded-xl border border-sky-200 bg-sky-50/80 px-2.5 py-1 text-[11px] font-semibold text-sky-900 hover:bg-sky-100/80 transition">DÃ¼zenle</a>
+                                        <a href="{{ route('admin.doktorlar.edit', $d) }}" class="rounded-xl border border-sky-200 bg-sky-50/80 px-2.5 py-1 text-[11px] font-semibold text-sky-900 hover:bg-sky-100/80 transition">Düzenle</a>
                                     @else
-                                        <span class="text-[11px] text-slate-400">KullanÄ±cÄ± yok</span>
+                                        <span class="text-[11px] text-slate-400">Kullan?c? yok</span>
                                     @endif
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="px-3 py-6 text-center text-sm text-slate-500">HenÃ¼z doktor eklenmemiÅŸ.</td>
+                                <td colspan="4" class="px-3 py-6 text-center text-sm text-slate-500">Henüz doktor eklenmemiº.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -132,7 +123,7 @@
 
         <div class="rounded-3xl border border-emerald-100/80 bg-white/70 hospital-glass p-5 shadow-sm space-y-4">
             <h2 class="text-sm font-extrabold text-slate-900">Bu kuruma doktor ekle</h2>
-            <p class="text-xs text-slate-600">Yeni kullanÄ±cÄ± hesabÄ± oluÅŸturulur ve doÄŸrudan bu kuruma atanÄ±r.</p>
+            <p class="text-xs text-slate-600">Yeni kullan?c? hesab? oluºturulur ve do?rudan bu kuruma atan?r.</p>
             <form method="post" action="{{ route('admin.saglik-merkezleri.doktorlar.store', $hastane) }}" class="grid gap-4 sm:grid-cols-2">
                 @csrf
                 <div class="sm:col-span-2">
@@ -146,12 +137,12 @@
                            class="mt-1 w-full rounded-2xl border border-emerald-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
                 </div>
                 <div>
-                    <label for="doc_password" class="text-xs font-bold text-slate-700">Åžifre</label>
+                    <label for="doc_password" class="text-xs font-bold text-slate-700">ªifre</label>
                     <input type="password" name="password" id="doc_password" required autocomplete="new-password"
                            class="mt-1 w-full rounded-2xl border border-emerald-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
                 </div>
                 <div>
-                    <label for="doc_password_confirmation" class="text-xs font-bold text-slate-700">Åžifre (tekrar)</label>
+                    <label for="doc_password_confirmation" class="text-xs font-bold text-slate-700">ªifre (tekrar)</label>
                     <input type="password" name="password_confirmation" id="doc_password_confirmation" required autocomplete="new-password"
                            class="mt-1 w-full rounded-2xl border border-emerald-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
                 </div>
@@ -163,16 +154,16 @@
                 </div>
                 <div>
                     <label for="doc_physical_clinic_name" class="text-xs font-bold text-slate-700">Fiziksel poliklinik (iste?e ba?l?)</label>
-                    <input type="text" name="physical_clinic_name" id="doc_physical_clinic_name" value="{{ old('physical_clinic_name') }}" placeholder="Örn. Dahiliye Pol. 2"
+                    <input type="text" name="physical_clinic_name" id="doc_physical_clinic_name" value="{{ old('physical_clinic_name') }}" placeholder="?rn. Dahiliye Pol. 2"
                            class="mt-1 w-full rounded-2xl border border-emerald-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
                 </div>
                 <div>
                     <label for="doc_room_no" class="text-xs font-bold text-slate-700">Oda no (iste?e ba?l?)</label>
-                    <input type="text" name="room_no" id="doc_room_no" value="{{ old('room_no') }}" placeholder="Örn. A-204"
+                    <input type="text" name="room_no" id="doc_room_no" value="{{ old('room_no') }}" placeholder="?rn. A-204"
                            class="mt-1 w-full rounded-2xl border border-emerald-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
                 </div>
                 <div>
-                    <label for="doc_title" class="text-xs font-bold text-slate-700">Ãœnvan</label>
+                    <label for="doc_title" class="text-xs font-bold text-slate-700">Ünvan</label>
                     <input type="text" name="title" id="doc_title" value="{{ old('title') }}"
                            class="mt-1 w-full rounded-2xl border border-emerald-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
                 </div>
@@ -187,7 +178,7 @@
                            class="mt-1 w-full rounded-2xl border border-emerald-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
                 </div>
                 <div>
-                    <label for="doc_tc" class="text-xs font-bold text-slate-700">T.C. kimlik (isteÄŸe baÄŸlÄ±)</label>
+                    <label for="doc_tc" class="text-xs font-bold text-slate-700">T.C. kimlik (iste?e ba?l?)</label>
                     <input type="text" name="tc_kimlik_no" id="doc_tc" value="{{ old('tc_kimlik_no') }}" maxlength="11" inputmode="numeric"
                            class="mt-1 w-full rounded-2xl border border-emerald-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
                 </div>
@@ -199,7 +190,7 @@
                 <div class="sm:col-span-2 flex items-center gap-2">
                     <input type="hidden" name="is_aile_hekimi" value="0" />
                     <input type="checkbox" name="is_aile_hekimi" id="doc_is_aile_hekimi" value="1" class="h-4 w-4 rounded border-emerald-300" @checked(old('is_aile_hekimi')) />
-                    <label for="doc_is_aile_hekimi" class="text-sm font-medium text-slate-800">Aile hekimi (kayÄ±tlÄ± hastalar bu Ã¼nvana gÃ¶re Ã¶neri alabilir)</label>
+                    <label for="doc_is_aile_hekimi" class="text-sm font-medium text-slate-800">Aile hekimi (kay?tl? hastalar bu ünvana göre öneri alabilir)</label>
                 </div>
                 <div class="sm:col-span-2">
                     <button type="submit" class="rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-600/20 hover:bg-emerald-700 transition">
@@ -212,38 +203,39 @@
         @include('admin.partials.kurum-yoneticileri-yonet', [
             'hastane' => $hastane,
             'kurumYoneticisiUpdateRoute' => 'admin.saglik-merkezleri.kurum-yoneticisi.update',
+            'kurumYoneticisiDestroyRoute' => 'admin.saglik-merkezleri.kurum-yoneticisi.destroy',
         ])
 
-        <div class="rounded-3xl border border-violet-100/80 bg-white/70 hospital-glass p-5 shadow-sm space-y-4">
-            <h2 class="text-sm font-extrabold text-slate-900">Yeni kurum paneli kullan?c?s?</h2>
-            <p class="text-xs text-slate-600 leading-relaxed">
-                Bu sa?l?k merkezi için <strong class="font-semibold text-slate-800">/hastane</strong> adresinden giriº yapabilecek bir hesap oluºturur. Giriº sayfas?nda ?Kurum? sekmesini seçmelidir.
+        <div class="rounded-2xl border border-violet-100/80 bg-white/70 hospital-glass p-3 shadow-sm space-y-2">
+            <h2 class="text-xs font-extrabold text-slate-900">Yeni kurum paneli kullan?c?s?</h2>
+            <p class="text-[10px] text-slate-600 leading-snug">
+                Bu sa?l?k merkezi i?in <strong class="font-semibold text-slate-800">/saglik-merkezi</strong> giri?i. ?Kurum? sekmesi.
             </p>
-            <form method="post" action="{{ route('admin.saglik-merkezleri.kurum-yoneticisi.store', $hastane) }}" class="grid gap-4 sm:grid-cols-2">
+            <form method="post" action="{{ route('admin.saglik-merkezleri.kurum-yoneticisi.store', $hastane) }}" class="grid gap-2 sm:grid-cols-2">
                 @csrf
                 <div class="sm:col-span-2">
-                    <label for="kurum_admin_name" class="text-xs font-bold text-slate-700">Ad soyad</label>
+                    <label for="kurum_admin_name" class="text-[10px] font-bold text-slate-700">Ad soyad</label>
                     <input type="text" name="kurum_admin_name" id="kurum_admin_name" value="{{ old('kurum_admin_name') }}" required autocomplete="name"
-                           class="mt-1 w-full rounded-2xl border border-violet-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
+                           class="mt-0.5 w-full rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-xs text-slate-900" />
                 </div>
                 <div class="sm:col-span-2">
-                    <label for="kurum_admin_email" class="text-xs font-bold text-slate-700">E-posta</label>
+                    <label for="kurum_admin_email" class="text-[10px] font-bold text-slate-700">E-posta</label>
                     <input type="email" name="kurum_admin_email" id="kurum_admin_email" value="{{ old('kurum_admin_email') }}" required autocomplete="email"
-                           class="mt-1 w-full rounded-2xl border border-violet-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
+                           class="mt-0.5 w-full rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-xs text-slate-900" />
                 </div>
                 <div>
-                    <label for="kurum_admin_password" class="text-xs font-bold text-slate-700">ªifre</label>
+                    <label for="kurum_admin_password" class="text-[10px] font-bold text-slate-700">?ifre</label>
                     <input type="password" name="kurum_admin_password" id="kurum_admin_password" required autocomplete="new-password"
-                           class="mt-1 w-full rounded-2xl border border-violet-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
+                           class="mt-0.5 w-full rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-xs text-slate-900" />
                 </div>
                 <div>
-                    <label for="kurum_admin_password_confirmation" class="text-xs font-bold text-slate-700">ªifre (tekrar)</label>
+                    <label for="kurum_admin_password_confirmation" class="text-[10px] font-bold text-slate-700">?ifre (tekrar)</label>
                     <input type="password" name="kurum_admin_password_confirmation" id="kurum_admin_password_confirmation" required autocomplete="new-password"
-                           class="mt-1 w-full rounded-2xl border border-violet-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
+                           class="mt-0.5 w-full rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-xs text-slate-900" />
                 </div>
                 <div class="sm:col-span-2">
-                    <button type="submit" class="rounded-2xl border border-violet-300 bg-violet-50/90 px-5 py-2.5 text-sm font-semibold text-violet-950 hover:bg-violet-100/90 transition">
-                        Kurum paneli hesab? oluºtur
+                    <button type="submit" class="rounded-lg border border-violet-300 bg-violet-50/90 px-3 py-1.5 text-xs font-semibold text-violet-950 hover:bg-violet-100/90 transition">
+                        Kurum paneli hesab? olu?tur
                     </button>
                 </div>
             </form>

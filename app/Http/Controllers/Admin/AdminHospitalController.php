@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\BuildsPoliklinikSaatFormBlocks;
+use App\Http\Controllers\Concerns\CreatesHospitalAdminFromOptionalForm;
 use App\Http\Controllers\Concerns\HandlesHospitalDistrictInput;
 use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\Doctor;
 use App\Models\Hospital;
-use App\Models\HospitalWorkingHour;
 use App\Models\User;
 use App\Services\DoctorRandevuSlotGenerator;
+use App\Services\HospitalDepartmentSettingService;
+use App\Services\HospitalDepartmentWorkingHoursService;
 use App\Services\HospitalWorkingHoursService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -23,22 +26,15 @@ use Illuminate\View\View;
 
 class AdminHospitalController extends Controller
 {
+    use BuildsPoliklinikSaatFormBlocks;
+    use CreatesHospitalAdminFromOptionalForm;
     use HandlesHospitalDistrictInput;
 
     public function __construct(
-        private readonly HospitalWorkingHoursService $workingHoursService
+        private readonly HospitalWorkingHoursService $workingHoursService,
+        private readonly HospitalDepartmentWorkingHoursService $departmentWorkingHoursService,
+        private readonly HospitalDepartmentSettingService $departmentSettingService,
     ) {}
-
-    /** ISO hafta günü 1 = Pazartesi … 7 = Pazar */
-    private const GUNLER = [
-        1 => 'Pazartesi',
-        2 => 'Salı',
-        3 => 'Çarşamba',
-        4 => 'Perşembe',
-        5 => 'Cuma',
-        6 => 'Cumartesi',
-        7 => 'Pazar',
-    ];
 
     public function index(Request $request): View
     {
@@ -82,39 +78,10 @@ class AdminHospitalController extends Controller
             ->orderBy('name')
             ->get();
 
-        $intervals = old('intervals', null);
-        if ($intervals === null) {
-            $intervals = $this->defaultWorkingIntervals();
-        } else {
-            $intervals = array_values(is_array($intervals) ? $intervals : []);
-        }
-
         return view('admin.hastaneler.create', [
             'departments' => $departments,
-            'intervals' => $intervals,
-            'gunler' => self::GUNLER,
             'doctorRows' => $this->doctorRowsFromOld(),
-            'useFixedWeekdayColumn' => $this->shouldUseFixedWeekdayRowsForCreate($intervals),
         ]);
-    }
-
-    /**
-     * Yalnızca Pazartesi–Cuma, her gün tek satır ve sıra bozulmamışsa gün sütununda açılır liste göstermeyiz (gün adı tek yazılır).
-     *
-     * @param  list<array<string, mixed>>  $intervals
-     */
-    private function shouldUseFixedWeekdayRowsForCreate(array $intervals): bool
-    {
-        if (count($intervals) !== 5) {
-            return false;
-        }
-        foreach (array_values($intervals) as $i => $row) {
-            if ((int) ($row['weekday'] ?? 0) !== $i + 1) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     public function store(Request $request): RedirectResponse
@@ -131,12 +98,13 @@ class AdminHospitalController extends Controller
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $normalizedIntervals = $this->workingHoursService->normalizeIntervalsFromRequest($request);
         $doctorRows = $this->validatedDoctorRowsFromRequest($request, uniqueEmail: true);
+        $requiredDeptIds = collect($doctorRows)->pluck('department_id')->unique()->values()->all();
+        $byDept = $this->departmentWorkingHoursService->buildDefaultWeekdayRowsWithLunchForDepartments($requiredDeptIds);
 
         $generator = app(DoctorRandevuSlotGenerator::class);
 
-        $hospital = DB::transaction(function () use ($validated, $districts, $request, $normalizedIntervals, $doctorRows) {
+        $hospital = DB::transaction(function () use ($validated, $districts, $request, $doctorRows, $byDept) {
             $h = Hospital::query()->create([
                 'name' => $validated['name'],
                 'city' => $validated['city'] ?? null,
@@ -145,11 +113,14 @@ class AdminHospitalController extends Controller
                 'address' => $validated['address'] ?? null,
                 'latitude' => $request->filled('latitude') ? (float) $validated['latitude'] : null,
                 'longitude' => $request->filled('longitude') ? (float) $validated['longitude'] : null,
+                'randevu_slot_dakika' => 30,
                 'is_active' => $request->boolean('is_active', true),
                 'is_saglik_merkezi' => false,
             ]);
 
-            $this->workingHoursService->sync($h->id, $normalizedIntervals);
+            $this->workingHoursService->sync($h->id, $this->workingHoursService->buildWeekdayOneToFiveWithLunchBreak());
+            $this->departmentWorkingHoursService->syncForHospital($h->id, $byDept);
+            $this->departmentSettingService->syncFromMuayeneRequest($h->id, $request, $byDept, 30);
 
             foreach ($doctorRows as $row) {
                 $tc = $row['tc_kimlik_no'] ?? $this->generateUniqueTcKimlik($row['email']);
@@ -178,19 +149,28 @@ class AdminHospitalController extends Controller
                 ]);
             }
 
+            $this->createHospitalAdminIfRequested($request, $h);
+
             return $h;
         });
 
         $generator->resyncFutureSlotsForHospital((int) $hospital->id);
 
+        $hasKurumAdmin = User::query()
+            ->where('managed_hospital_id', $hospital->id)
+            ->whereRaw('LOWER(TRIM(role)) = ?', ['hospital_admin'])
+            ->exists();
+
         return redirect()
             ->route('admin.hastaneler.index')
-            ->with('success', 'Hastane kaydı oluşturuldu.');
+            ->with('success', $hasKurumAdmin
+                ? 'Hastane kaydı oluşturuldu; kurum paneli yöneticisi de tanımlandı.'
+                : 'Hastane kaydı oluşturuldu.');
     }
 
     public function edit(Hospital $hastane): View
     {
-        $hastane->load(['workingHours', 'doctors.user', 'doctors.department', 'managedHospitalAdmins']);
+        $hastane->load(['departmentWorkingHours', 'departmentSettings', 'doctors.user', 'doctors.department', 'managedHospitalAdmins']);
 
         $departments = Department::query()
             ->where('is_active', true)
@@ -198,24 +178,18 @@ class AdminHospitalController extends Controller
             ->orderBy('name')
             ->get();
 
-        $intervals = old('intervals', null);
-        if ($intervals === null) {
-            $intervals = $hastane->workingHours->map(function (HospitalWorkingHour $wh) {
-                return [
-                    'weekday' => (int) $wh->weekday,
-                    'start_time' => $this->formatTimeInput($wh->start_time),
-                    'end_time' => $this->formatTimeInput($wh->end_time),
-                ];
-            })->values()->all();
-        } else {
-            $intervals = array_values(is_array($intervals) ? $intervals : []);
-        }
+        $requiredDeptIdsMuayene = $this->departmentIdsWithDoctorsAtHospital($hastane);
+        $poliklinikSaatleri = $this->buildPoliklinikSaatFormBlocks(
+            $hastane,
+            $this->departmentIdsForHospitalPoliklinik($hastane),
+            $requiredDeptIdsMuayene,
+        );
 
         return view('admin.hastaneler.edit', [
             'hastane' => $hastane,
             'departments' => $departments,
-            'intervals' => $intervals,
-            'gunler' => self::GUNLER,
+            'poliklinikSaatleri' => $poliklinikSaatleri,
+            'requiredDeptIdsMuayene' => $requiredDeptIdsMuayene,
         ]);
     }
 
@@ -233,10 +207,15 @@ class AdminHospitalController extends Controller
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $normalizedIntervals = $this->workingHoursService->normalizeIntervalsFromRequest($request);
+        $requiredDeptIds = $this->departmentIdsWithDoctorsAtHospital($hastane);
+        $byDept = $this->departmentWorkingHoursService->normalizeDeptMuayeneSimpleFromRequest(
+            $request,
+            $this->allActiveDepartmentIds(),
+            $requiredDeptIds
+        );
         $generator = app(DoctorRandevuSlotGenerator::class);
 
-        DB::transaction(function () use ($validated, $districts, $request, $hastane, $normalizedIntervals) {
+        DB::transaction(function () use ($validated, $districts, $request, $hastane, $byDept) {
             $hastane->update([
                 'name' => $validated['name'],
                 'city' => $validated['city'] ?? null,
@@ -249,14 +228,21 @@ class AdminHospitalController extends Controller
                 'is_saglik_merkezi' => false,
             ]);
 
-            $this->workingHoursService->sync($hastane->id, $normalizedIntervals);
+            $this->workingHoursService->sync($hastane->id, $this->workingHoursService->buildWeekdayOneToFiveWithLunchBreak());
+            $this->departmentWorkingHoursService->syncForHospital($hastane->id, $byDept);
+            $this->departmentSettingService->syncFromMuayeneRequest(
+                $hastane->id,
+                $request,
+                $byDept,
+                (int) ($hastane->randevu_slot_dakika ?? 30)
+            );
         });
 
         $generator->resyncFutureSlotsForHospital((int) $hastane->id);
 
         return redirect()
             ->route('admin.hastaneler.edit', $hastane)
-            ->with('success', 'Hastane bilgileri ve çalışma saatleri güncellendi; bu hastanedeki doktorların gelecekteki boş slotları yenilendi.');
+            ->with('success', 'Hastane bilgileri, birim muayene saatleri ve randevu dilimi güncellendi; boş slotlar yenilendi.');
     }
 
     public function storeDoctor(Request $request, Hospital $hastane): RedirectResponse
@@ -402,6 +388,22 @@ class AdminHospitalController extends Controller
             ->with('success', 'Kurum yöneticisi bilgileri güncellendi.');
     }
 
+    public function destroyHospitalAdmin(Hospital $hastane, User $kurumYoneticisi): RedirectResponse
+    {
+        $this->assertHospitalAdminForHospital($kurumYoneticisi, $hastane);
+
+        $kurumYoneticisi->delete();
+
+        $hastane->refresh();
+        $editRoute = $hastane->is_saglik_merkezi
+            ? 'admin.saglik-merkezleri.edit'
+            : 'admin.hastaneler.edit';
+
+        return redirect()
+            ->route($editRoute, $hastane)
+            ->with('success', 'Kurum yöneticisi silindi.');
+    }
+
     private function assertHospitalAdminForHospital(User $user, Hospital $hastane): void
     {
         if (! $user->isHospitalAdmin() || (int) $user->managed_hospital_id !== (int) $hastane->id) {
@@ -430,20 +432,6 @@ class AdminHospitalController extends Controller
         $raw = array_values($raw);
 
         return $raw === [] ? [[]] : $raw;
-    }
-
-    private function defaultWorkingIntervals(): array
-    {
-        $rows = [];
-        foreach ([1, 2, 3, 4, 5] as $weekday) {
-            $rows[] = [
-                'weekday' => $weekday,
-                'start_time' => '09:00',
-                'end_time' => '17:00',
-            ];
-        }
-
-        return $rows;
     }
 
     /**

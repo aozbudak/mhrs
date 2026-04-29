@@ -24,6 +24,9 @@ class Doctor extends Model
         'bio',
         'is_active',
         'is_aile_hekimi',
+        'ameliyat_baslangic_saati',
+        'ameliyat_bitis_saati',
+        'ameliyat_tarihi',
     ];
 
     protected function casts(): array
@@ -31,6 +34,7 @@ class Doctor extends Model
         return [
             'is_active' => 'boolean',
             'is_aile_hekimi' => 'boolean',
+            'ameliyat_tarihi' => 'date',
         ];
     }
 
@@ -62,5 +66,10 @@ class Doctor extends Model
     public function randevular(): HasMany
     {
         return $this->hasMany(Randevu::class)->orderByDesc('created_at');
+    }
+
+    public function actionHistories(): HasMany
+    {
+        return $this->hasMany(DoctorActionHistory::class)->orderByDesc('created_at');
     }
 }

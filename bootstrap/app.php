@@ -34,7 +34,11 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             $hospitalUser = auth('hospital')->user();
-            if ($hospitalUser instanceof User && $hospitalUser->isHospitalAdmin()) {
+            if ($hospitalUser instanceof User && ($hospitalUser->isHospitalAdmin() || $hospitalUser->isDepartmentHead())) {
+                if ($hospitalUser->isDepartmentHead()) {
+                    return route('bolum-baskanligi.panel');
+                }
+
                 $hospitalUser->loadMissing('managedHospital');
                 $mh = $hospitalUser->managedHospital;
 

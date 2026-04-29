@@ -67,32 +67,16 @@
                                         \App\Enums\RandevuDurumu::Gelmedi => ['Gelmedi', 'bg-rose-100 text-rose-900'],
                                     };
                                 @endphp
-                                <div class="rounded-2xl border border-violet-200/90 bg-violet-50/30 p-4 shadow-sm transition hover:border-violet-300/90 hover:shadow-md">
-                                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                        <div class="min-w-0 flex-1">
-                                            <div class="flex flex-wrap items-center gap-2">
-                                                <div class="text-sm font-semibold text-violet-950">
-                                                    @if ($r->slot)
-                                                        {{ $r->slot->baslangic->timezone(config('app.timezone'))->format('d.m.Y H:i') }}
-                                                    @else
-                                                        —
-                                                    @endif
-                                                </div>
-                                                <span class="inline-flex rounded-full bg-violet-200/90 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-950">Gizli</span>
-                                            </div>
-                                            <div class="mt-1 text-xs text-violet-900/85">
-                                                Dr. {{ $r->doctor?->user?->name ?? $r->doctor?->title ?? '—' }}
-                                                @if ($r->doctor?->department) · {{ $r->doctor->department->name }} @endif
-                                            </div>
-                                            @if ($r->sikayet)
-                                                <div class="mt-2 text-[11px] text-violet-900/70">
-                                                    Not: {{ \Illuminate\Support\Str::limit($r->sikayet, 160) }}
-                                                </div>
-                                            @endif
-                                        </div>
-                                        <span class="shrink-0 self-start rounded-full px-2.5 py-1 text-[10px] font-bold {{ $durumEtiket[1] }}">{{ $durumEtiket[0] }}</span>
-                                    </div>
-                                </div>
+                                @include('musteri.partials.randevu-kart', [
+                                    'r' => $r,
+                                    'durumEtiket' => $durumEtiket,
+                                    'cardClass' => 'rounded-2xl border border-violet-200/90 bg-violet-50/30 p-4 shadow-sm transition hover:border-violet-300/90 hover:shadow-md',
+                                    'titleClass' => 'text-sm font-semibold text-violet-950',
+                                    'subClass' => 'mt-1 text-xs text-violet-900/85',
+                                    'notClass' => 'text-violet-900/70',
+                                    'gizliRozet' => true,
+                                    'haritaModu' => 'full',
+                                ])
                             @endforeach
                         </div>
                     </div>
@@ -112,29 +96,12 @@
                                         \App\Enums\RandevuDurumu::Gelmedi => ['Gelmedi', 'bg-rose-100 text-rose-900'],
                                     };
                                 @endphp
-                                <div class="rounded-2xl border border-sky-100/90 bg-white/80 p-4 shadow-sm transition hover:border-sky-200/90 hover:shadow-md">
-                                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                        <div class="min-w-0 flex-1">
-                                            <div class="text-sm font-semibold text-slate-900">
-                                                @if ($r->slot)
-                                                    {{ $r->slot->baslangic->timezone(config('app.timezone'))->format('d.m.Y H:i') }}
-                                                @else
-                                                    —
-                                                @endif
-                                            </div>
-                                            <div class="mt-1 text-xs text-slate-600">
-                                                Dr. {{ $r->doctor?->user?->name ?? $r->doctor?->title ?? '—' }}
-                                                @if ($r->doctor?->department) · {{ $r->doctor->department->name }} @endif
-                                            </div>
-                                            @if ($r->sikayet)
-                                                <div class="mt-2 text-[11px] text-slate-500">
-                                                    Not: {{ \Illuminate\Support\Str::limit($r->sikayet, 160) }}
-                                                </div>
-                                            @endif
-                                        </div>
-                                        <span class="shrink-0 self-start rounded-full px-2.5 py-1 text-[10px] font-bold {{ $durumEtiket[1] }}">{{ $durumEtiket[0] }}</span>
-                                    </div>
-                                </div>
+                                @include('musteri.partials.randevu-kart', [
+                                    'r' => $r,
+                                    'durumEtiket' => $durumEtiket,
+                                    'cardClass' => 'rounded-2xl border border-sky-100/90 bg-white/80 p-4 shadow-sm transition hover:border-sky-200/90 hover:shadow-md',
+                                    'haritaModu' => 'full',
+                                ])
                             @endforeach
                         </div>
                     </div>

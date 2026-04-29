@@ -23,9 +23,12 @@
 @php
     $__hUser = auth('hospital')->user()?->fresh();
     $__hName = $__hUser?->managedHospital?->name;
+    $__isDepartmentHead = $__hUser?->isDepartmentHead() ?? false;
     $__kr = request()->routeIs('saglik-merkezi.*') ? 'saglik-merkezi' : 'hastane';
     $__kurumEtiket = request()->routeIs('saglik-merkezi.*') ? 'Sağlık merkezi' : 'Hastane';
     $isKurumOzet = request()->routeIs('hastane.panel') || request()->routeIs('saglik-merkezi.panel');
+    $isBolumBaskanPanel = request()->routeIs('bolum-baskanligi.panel');
+    $isBolumBaskanDoktorlar = request()->routeIs('bolum-baskanligi.doktorlar.*');
     $isKurumDoktorlar = request()->routeIs('hastane.doktorlar') || request()->routeIs('saglik-merkezi.doktorlar');
     $isKurumAyarlar = request()->routeIs('hastane.ayarlar*') || request()->routeIs('saglik-merkezi.ayarlar*');
     $isKurumRandevular = request()->routeIs('hastane.randevular.*') || request()->routeIs('saglik-merkezi.randevular.*');
@@ -66,6 +69,22 @@
                 </div>
 
                 <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-3 py-4" aria-label="Kurum menü">
+                    @if ($__isDepartmentHead)
+                        <a href="{{ route('bolum-baskanligi.panel') }}"
+                           class="hospital-panel-nav-item admin-lift flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition {{ $isBolumBaskanPanel ? 'bg-gradient-to-r from-sky-100 to-emerald-50/80 text-sky-950 shadow-sm' : 'text-slate-600 hover:bg-white/70' }}">
+                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl {{ $isBolumBaskanPanel ? 'bg-white text-sky-700' : 'bg-sky-50/80 text-sky-600' }}">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>
+                            </span>
+                            Bölüm başkanlığı
+                        </a>
+                        <a href="{{ route('bolum-baskanligi.doktorlar.index') }}"
+                           class="hospital-panel-nav-item admin-lift flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition {{ $isBolumBaskanDoktorlar ? 'bg-gradient-to-r from-sky-100 to-emerald-50/80 text-sky-950 shadow-sm' : 'text-slate-600 hover:bg-white/70' }}">
+                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl {{ $isBolumBaskanDoktorlar ? 'bg-white text-sky-700' : 'bg-sky-50/80 text-sky-600' }}">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            </span>
+                            Doktor listesi
+                        </a>
+                    @else
                     <a href="{{ route($__kr.'.panel') }}"
                        class="hospital-panel-nav-item admin-lift flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition {{ $isKurumOzet ? 'bg-gradient-to-r from-sky-100 to-emerald-50/80 text-sky-950 shadow-sm' : 'text-slate-600 hover:bg-white/70' }}">
                         <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl {{ $isKurumOzet ? 'bg-white text-sky-700' : 'bg-sky-50/80 text-sky-600' }}">
@@ -101,6 +120,7 @@
                         </span>
                         Profil
                     </a>
+                    @endif
                 </nav>
 
                 <div class="shrink-0 border-t border-sky-100/80 px-3 py-3">

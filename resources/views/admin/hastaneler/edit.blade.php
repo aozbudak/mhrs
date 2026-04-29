@@ -57,27 +57,18 @@
                 </div>
             </div>
 
+            @include('admin.partials.kurum-konum-picker', ['suffix' => 'hastaneEdit'])
+
             <div class="flex items-center gap-2">
                 <input type="hidden" name="is_active" value="0" />
                 <input type="checkbox" name="is_active" id="is_active" value="1" class="h-4 w-4 rounded border-sky-300" @checked(old('is_active', $hastane->is_active)) />
                 <label for="is_active" class="text-sm font-medium text-slate-800">Aktif</label>
             </div>
 
-            <div class="border-t border-sky-100 pt-6">
-                <h2 class="text-sm font-extrabold text-slate-900">Hastane çalışma saatleri</h2>
-                <p class="mt-1 text-xs text-slate-600 leading-relaxed">
-                    Değişiklik kaydedildiğinde bu hastanedeki tüm doktorlar için bağlı randevusu olmayan gelecekteki boş slotlar silinir ve yeni programa göre yeniden üretilir.
-                </p>
-                <div class="mt-4">
-                    @include('admin.partials.working-hours-intervals', [
-                        'intervals' => $intervals,
-                        'gunler' => $gunler,
-                        'bodyId' => 'hospitalEditWhBody',
-                        'tplId' => 'hospitalEditWhTpl',
-                        'addBtnId' => 'hospitalEditWhAdd',
-                    ])
-                </div>
-            </div>
+            @include('admin.partials.poliklinik-muayene-saatleri', [
+                'poliklinikSaatleri' => $poliklinikSaatleri ?? [],
+                'requiredDeptIdsMuayene' => $requiredDeptIdsMuayene ?? [],
+            ])
 
             <div class="flex flex-wrap gap-2 border-t border-sky-100 pt-4">
                 <button type="submit" class="rounded-2xl border border-emerald-200 bg-emerald-50/90 px-5 py-2.5 text-sm font-semibold text-emerald-900 hover:bg-emerald-100/90 transition">
@@ -216,37 +207,39 @@
         @include('admin.partials.kurum-yoneticileri-yonet', [
             'hastane' => $hastane,
             'kurumYoneticisiUpdateRoute' => 'admin.hastaneler.kurum-yoneticisi.update',
+            'kurumYoneticisiDestroyRoute' => 'admin.hastaneler.kurum-yoneticisi.destroy',
         ])
 
-        <div class="rounded-3xl border border-violet-100/80 bg-white/70 hospital-glass p-5 shadow-sm space-y-4">
-            <h2 class="text-sm font-extrabold text-slate-900">Yeni kurum paneli kullanıcısı</h2>
-            <p class="text-xs text-slate-600 leading-relaxed">
-                Bu hastane için <strong class="font-semibold text-slate-800">/hastane</strong> adresinden giriş yapabilecek bir hesap oluşturur. Giriş sayfasında «Kurum» sekmesini seçmelidir.
+
+        <div class="rounded-2xl border border-violet-100/80 bg-white/70 hospital-glass p-3 shadow-sm space-y-2">
+            <h2 class="text-xs font-extrabold text-slate-900">Yeni kurum paneli kullanıcısı</h2>
+            <p class="text-[10px] text-slate-600 leading-snug">
+                <strong class="font-semibold text-slate-800">/hastane</strong> girişi. «Kurum» sekmesi.
             </p>
-            <form method="post" action="{{ route('admin.hastaneler.kurum-yoneticisi.store', $hastane) }}" class="grid gap-4 sm:grid-cols-2">
+            <form method="post" action="{{ route('admin.hastaneler.kurum-yoneticisi.store', $hastane) }}" class="grid gap-2 sm:grid-cols-2">
                 @csrf
                 <div class="sm:col-span-2">
-                    <label for="kurum_admin_name" class="text-xs font-bold text-slate-700">Ad soyad</label>
+                    <label for="kurum_admin_name" class="text-[10px] font-bold text-slate-700">Ad soyad</label>
                     <input type="text" name="kurum_admin_name" id="kurum_admin_name" value="{{ old('kurum_admin_name') }}" required autocomplete="name"
-                           class="mt-1 w-full rounded-2xl border border-violet-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
+                           class="mt-0.5 w-full rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-xs text-slate-900" />
                 </div>
                 <div class="sm:col-span-2">
-                    <label for="kurum_admin_email" class="text-xs font-bold text-slate-700">E-posta</label>
+                    <label for="kurum_admin_email" class="text-[10px] font-bold text-slate-700">E-posta</label>
                     <input type="email" name="kurum_admin_email" id="kurum_admin_email" value="{{ old('kurum_admin_email') }}" required autocomplete="email"
-                           class="mt-1 w-full rounded-2xl border border-violet-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
+                           class="mt-0.5 w-full rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-xs text-slate-900" />
                 </div>
                 <div>
-                    <label for="kurum_admin_password" class="text-xs font-bold text-slate-700">Şifre</label>
+                    <label for="kurum_admin_password" class="text-[10px] font-bold text-slate-700">Şifre</label>
                     <input type="password" name="kurum_admin_password" id="kurum_admin_password" required autocomplete="new-password"
-                           class="mt-1 w-full rounded-2xl border border-violet-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
+                           class="mt-0.5 w-full rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-xs text-slate-900" />
                 </div>
                 <div>
-                    <label for="kurum_admin_password_confirmation" class="text-xs font-bold text-slate-700">Şifre (tekrar)</label>
+                    <label for="kurum_admin_password_confirmation" class="text-[10px] font-bold text-slate-700">Şifre (tekrar)</label>
                     <input type="password" name="kurum_admin_password_confirmation" id="kurum_admin_password_confirmation" required autocomplete="new-password"
-                           class="mt-1 w-full rounded-2xl border border-violet-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm" />
+                           class="mt-0.5 w-full rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-xs text-slate-900" />
                 </div>
                 <div class="sm:col-span-2">
-                    <button type="submit" class="rounded-2xl border border-violet-300 bg-violet-50/90 px-5 py-2.5 text-sm font-semibold text-violet-950 hover:bg-violet-100/90 transition">
+                    <button type="submit" class="rounded-lg border border-violet-300 bg-violet-50/90 px-3 py-1.5 text-xs font-semibold text-violet-950 hover:bg-violet-100/90 transition">
                         Kurum paneli hesabı oluştur
                     </button>
                 </div>

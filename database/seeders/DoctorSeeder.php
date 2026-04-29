@@ -5,7 +5,8 @@ namespace Database\Seeders;
 use App\Models\Department;
 use App\Models\Doctor;
 use App\Models\Hospital;
-use App\Models\HospitalWorkingHour;
+use App\Models\HospitalDepartmentSetting;
+use App\Models\HospitalDepartmentWorkingHour;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -34,8 +35,6 @@ class DoctorSeeder extends Seeder
             'latitude' => 40.9903,
             'longitude' => 29.0263,
         ])->save();
-
-        $this->seedHospitalWeekdaySlots($hospital);
 
         $doctorUser = User::query()->firstOrCreate(
             ['email' => 'doktor@example.com'],
@@ -75,19 +74,38 @@ class DoctorSeeder extends Seeder
             );
             $t++;
         }
+
+        $this->seedDepartmentWeekdaySlotsForHospital($hospital);
     }
 
-    private function seedHospitalWeekdaySlots(Hospital $hospital): void
+    private function seedDepartmentWeekdaySlotsForHospital(Hospital $hospital): void
     {
-        HospitalWorkingHour::query()->where('hospital_id', $hospital->id)->delete();
+        $deptIds = Doctor::query()
+            ->where('hospital_id', $hospital->id)
+            ->distinct()
+            ->pluck('department_id')
+            ->filter()
+            ->values();
 
-        foreach ([1, 2, 3, 4, 5] as $sort => $weekday) {
-            HospitalWorkingHour::query()->create([
+        HospitalDepartmentWorkingHour::query()->where('hospital_id', $hospital->id)->delete();
+        HospitalDepartmentSetting::query()->where('hospital_id', $hospital->id)->delete();
+
+        foreach ($deptIds as $departmentId) {
+            foreach ([1, 2, 3, 4, 5] as $sort => $weekday) {
+                HospitalDepartmentWorkingHour::query()->create([
+                    'hospital_id' => $hospital->id,
+                    'department_id' => (int) $departmentId,
+                    'weekday' => $weekday,
+                    'start_time' => '09:00:00',
+                    'end_time' => '17:00:00',
+                    'sort_order' => $sort,
+                ]);
+            }
+
+            HospitalDepartmentSetting::query()->create([
                 'hospital_id' => $hospital->id,
-                'weekday' => $weekday,
-                'start_time' => '09:00:00',
-                'end_time' => '17:00:00',
-                'sort_order' => $sort,
+                'department_id' => (int) $departmentId,
+                'randevu_slot_dakika' => 30,
             ]);
         }
     }

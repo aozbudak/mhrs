@@ -1,9 +1,10 @@
-{{-- Haftalık çalışma aralıkları: intervals[N][weekday|start_time|end_time] --}}
+{{-- Haftalık çalışma aralıkları: {fieldBase}[N][weekday|start_time|end_time] (varsayılan fieldBase: intervals) --}}
 @php
     $bodyId = $bodyId ?? 'whIntervalsBody';
     $tplId = $tplId ?? 'whIntervalsRowTpl';
     $addBtnId = $addBtnId ?? 'whIntervalsAdd';
     $useFixedWeekdayColumn = $useFixedWeekdayColumn ?? false;
+    $fieldBase = $fieldBase ?? 'intervals';
 @endphp
 
 <div class="rounded-2xl border border-sky-200/80 bg-white/80 overflow-x-auto">
@@ -22,10 +23,10 @@
                     <td class="px-3 py-2 align-middle">
                         @if ($useFixedWeekdayColumn && isset($row['weekday']))
                             <span class="block min-w-[9.5rem] font-semibold text-slate-800">{{ $gunler[(int) $row['weekday']] ?? $row['weekday'] }}</span>
-                            <input type="hidden" name="intervals[{{ $i }}][weekday]" value="{{ (int) $row['weekday'] }}" data-wh-field="weekday" data-wh-fixed="1">
+                            <input type="hidden" name="{{ $fieldBase }}[{{ $i }}][weekday]" value="{{ (int) $row['weekday'] }}" data-wh-field="weekday" data-wh-fixed="1">
                         @else
                             <label class="sr-only" for="wh-wd-{{ $i }}">Gün</label>
-                            <select name="intervals[{{ $i }}][weekday]" id="wh-wd-{{ $i }}" data-wh-field="weekday" required
+                            <select name="{{ $fieldBase }}[{{ $i }}][weekday]" id="wh-wd-{{ $i }}" data-wh-field="weekday" required
                                     class="w-full min-w-[9.5rem] rounded-xl border border-sky-200 bg-white px-2 py-2 text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
                                 @foreach ($gunler as $val => $label)
                                     <option value="{{ $val }}" @selected((int) ($row['weekday'] ?? 1) === (int) $val)>{{ $label }}</option>
@@ -35,13 +36,13 @@
                     </td>
                     <td class="px-3 py-2 align-middle">
                         <label class="sr-only" for="wh-st-{{ $i }}">Başlangıç</label>
-                        <input type="time" name="intervals[{{ $i }}][start_time]" id="wh-st-{{ $i }}" data-wh-field="start" step="300" required
+                        <input type="time" name="{{ $fieldBase }}[{{ $i }}][start_time]" id="wh-st-{{ $i }}" data-wh-field="start" step="300" required
                                value="{{ $row['start_time'] ?? '09:00' }}"
                                class="w-full rounded-xl border border-sky-200 bg-white px-2 py-2 text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
                     </td>
                     <td class="px-3 py-2 align-middle">
                         <label class="sr-only" for="wh-en-{{ $i }}">Bitiş</label>
-                        <input type="time" name="intervals[{{ $i }}][end_time]" id="wh-en-{{ $i }}" data-wh-field="end" step="300" required
+                        <input type="time" name="{{ $fieldBase }}[{{ $i }}][end_time]" id="wh-en-{{ $i }}" data-wh-field="end" step="300" required
                                value="{{ $row['end_time'] ?? '13:00' }}"
                                class="w-full rounded-xl border border-sky-200 bg-white px-2 py-2 text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
                     </td>
@@ -101,6 +102,7 @@
         var body = document.getElementById(@json($bodyId));
         var tpl = document.getElementById(@json($tplId));
         var addBtn = document.getElementById(@json($addBtnId));
+        var fieldBase = @json($fieldBase);
         var form = body && body.closest('form');
         if (!body || !tpl || !addBtn) return;
 
@@ -112,18 +114,18 @@
                 var st = tr.querySelector('input[data-wh-field="start"]');
                 var en = tr.querySelector('input[data-wh-field="end"]');
                 if (sel) {
-                    sel.name = 'intervals[' + i + '][weekday]';
+                    sel.name = fieldBase + '[' + i + '][weekday]';
                     sel.id = 'wh-wd-' + i;
                 }
                 if (hid) {
-                    hid.name = 'intervals[' + i + '][weekday]';
+                    hid.name = fieldBase + '[' + i + '][weekday]';
                 }
                 if (st) {
-                    st.name = 'intervals[' + i + '][start_time]';
+                    st.name = fieldBase + '[' + i + '][start_time]';
                     st.id = 'wh-st-' + i;
                 }
                 if (en) {
-                    en.name = 'intervals[' + i + '][end_time]';
+                    en.name = fieldBase + '[' + i + '][end_time]';
                     en.id = 'wh-en-' + i;
                 }
             });

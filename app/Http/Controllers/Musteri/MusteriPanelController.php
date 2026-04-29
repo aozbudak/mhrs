@@ -37,7 +37,7 @@ class MusteriPanelController extends Controller
     {
         $baseQuery = Randevu::query()
             ->where('user_id', MusteriAccess::user()->getAuthIdentifier())
-            ->with(['doctor.user', 'doctor.department', 'slot']);
+            ->with(['doctor.user', 'doctor.department', 'doctor.hospital', 'slot']);
 
         $yaklasanSirali = (clone $baseQuery)
             ->whereIn('durum', [RandevuDurumu::Bekliyor, RandevuDurumu::Onaylandi])
@@ -457,7 +457,12 @@ class MusteriPanelController extends Controller
 
             $doctorHasWorkingHours = Doctor::query()
                 ->whereKey($doctorId)
-                ->whereHas('hospital.workingHours')
+                ->whereHas('hospital.departmentWorkingHours', function ($dq) {
+                    $dq->whereColumn(
+                        'hospital_department_working_hours.department_id',
+                        'doctors.department_id'
+                    );
+                })
                 ->exists();
 
             $slotWindowEnd = now()->addDays(self::BOOKING_DAYS_AHEAD)->endOfDay();
@@ -804,7 +809,7 @@ class MusteriPanelController extends Controller
 
         $gecmisRandevular = Randevu::query()
             ->where('user_id', $gecmisGorunenHasta->id)
-            ->with(['doctor.user', 'doctor.department', 'slot'])
+            ->with(['doctor.user', 'doctor.department', 'doctor.hospital', 'slot'])
             ->where(function ($q) {
                 $q->whereIn('durum', [
                     RandevuDurumu::Tamamlandi,
@@ -878,6 +883,21 @@ class MusteriPanelController extends Controller
             if ($slotTipi === RandevuSlotTipi::Oncelikli && ! $target->isOncelikliHasta()) {
                 throw ValidationException::withMessages([
                     'randevu_slot_id' => 'Bu saat yalnızca öncelikli hastalar (65 yaş üstü veya engelli) içindir.',
+                ]);
+            }
+
+            $cakis = Randevu::query()
+                ->where('user_id', $target->id)
+                ->whereIn('durum', [RandevuDurumu::Bekliyor, RandevuDurumu::Onaylandi])
+                ->whereHas('slot', function ($q) use ($slot) {
+                    $q->where('baslangic', '<', $slot->bitis)
+                        ->where('bitis', '>', $slot->baslangic);
+                })
+                ->exists();
+
+            if ($cakis) {
+                throw ValidationException::withMessages([
+                    'randevu_slot_id' => 'Bu hasta için aynı zaman dilimine denk gelen başka bir randevunuz var. Önce onu iptal edin veya farklı bir saat seçin.',
                 ]);
             }
 

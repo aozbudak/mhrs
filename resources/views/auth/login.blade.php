@@ -15,7 +15,7 @@
                 {{ config('app.name', 'MHRS sistemi') }}
             </a>
             <h1 class="mt-6 text-2xl font-extrabold tracking-tight text-sky-950">Giriş</h1>
-            <p class="mt-2 text-sm text-slate-600">Hasta T.C. kimlik no; yönetici ve kurum (hastane / sağlık merkezi) hesapları e-posta ile giriş yapar. Kurum girişinde yönlendirme, atanmış kurum türünüze göre otomatik yapılır.</p>
+            <p class="mt-2 text-sm text-slate-600">Hasta T.C. kimlik no; yönetici ve kurum (hastane / sağlık merkezi / bölüm başkanı) hesapları e-posta ile giriş yapar. Kurum girişinde yönlendirme, atanmış yetki türünüze göre otomatik yapılır.</p>
         </div>
 
         <div class="rounded-3xl border border-sky-100/80 bg-white/80 hospital-glass p-6 shadow-lg shadow-sky-900/[0.06] sm:p-8">

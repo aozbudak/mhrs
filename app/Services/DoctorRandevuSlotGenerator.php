@@ -27,20 +27,35 @@ class DoctorRandevuSlotGenerator
 
     /**
      * Çalışma saatlerine göre ileri tarihli müsait slotları veritabanına yazar (firstOrCreate, tekrar güvenli).
+     * Slot süresi birim ayarından; yoksa kurum varsayılanından alınır.
      */
-    public function ensureSlotsForDoctor(int $doctorId, int $daysAhead = 30, int $slotMinutes = 30): void
+    public function ensureSlotsForDoctor(int $doctorId, int $daysAhead = 30, ?int $slotMinutesOverride = null): void
     {
         $doctor = Doctor::query()
             ->whereKey($doctorId)
             ->where('is_active', true)
-            ->with('hospital.workingHours')
+            ->with(['hospital.departmentWorkingHours', 'hospital.departmentSettings'])
             ->first();
 
         if (! $doctor || ! $doctor->hospital) {
             return;
         }
 
-        $workingHours = $doctor->hospital->workingHours;
+        $slotMinutes = $slotMinutesOverride;
+        if ($slotMinutes === null) {
+            $deptSetting = $doctor->hospital->departmentSettings
+                ->firstWhere('department_id', (int) $doctor->department_id);
+            $slotMinutes = self::normalizeSlotDakika(
+                $deptSetting?->randevu_slot_dakika ?? $doctor->hospital->randevu_slot_dakika ?? 30
+            );
+        } else {
+            $slotMinutes = self::normalizeSlotDakika($slotMinutes);
+        }
+
+        $workingHours = $doctor->hospital->departmentWorkingHours
+            ->where('department_id', (int) $doctor->department_id)
+            ->values();
+
         if ($workingHours->isEmpty()) {
             return;
         }
@@ -83,18 +98,18 @@ class DoctorRandevuSlotGenerator
         }
     }
 
-    public function ensureSlotsForAllActiveDoctors(int $daysAhead = 30, int $slotMinutes = 30): void
+    public function ensureSlotsForAllActiveDoctors(int $daysAhead = 30, ?int $slotMinutesOverride = null): void
     {
         $ids = Doctor::query()->where('is_active', true)->pluck('id');
         foreach ($ids as $id) {
-            $this->ensureSlotsForDoctor((int) $id, $daysAhead, $slotMinutes);
+            $this->ensureSlotsForDoctor((int) $id, $daysAhead, $slotMinutesOverride);
         }
     }
 
     /**
      * Hastane çalışma saati değişince: o hastanedeki tüm aktif doktorlar için gelecek boş slotları yeniler.
      */
-    public function resyncFutureSlotsForHospital(int $hospitalId, int $daysAhead = 30, int $slotMinutes = 30): void
+    public function resyncFutureSlotsForHospital(int $hospitalId, int $daysAhead = 30, ?int $slotMinutesOverride = null): void
     {
         $ids = Doctor::query()
             ->where('hospital_id', $hospitalId)
@@ -103,8 +118,21 @@ class DoctorRandevuSlotGenerator
 
         foreach ($ids as $id) {
             $this->removeFutureUnbookedMusaitSlots((int) $id);
-            $this->ensureSlotsForDoctor((int) $id, $daysAhead, $slotMinutes);
+            $this->ensureSlotsForDoctor((int) $id, $daysAhead, $slotMinutesOverride);
         }
+    }
+
+    public static function normalizeSlotDakika(int|float|string|null $dakika): int
+    {
+        $n = (int) $dakika;
+        if ($n < 5) {
+            return 5;
+        }
+        if ($n > 120) {
+            return 120;
+        }
+
+        return $n;
     }
 
     private function formatTimeForParse(mixed $t): string
